@@ -2,8 +2,10 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -45,6 +47,15 @@ func ConnectToDB() (*sql.DB, error) {
 	db, err := sql.Open("mysql", config.FormatDSN())
 	if err != nil {
 		log.Fatal("Error connecting to the database: ", err)
+	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	if err = db.Ping(); err != nil {
+		fmt.Errorf("Error pinging the database: ", err)
+		return nil, err
 	}
 
 	return db, nil
