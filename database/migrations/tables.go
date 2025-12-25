@@ -85,4 +85,52 @@ var Tables = []Migration{
 			INDEX idx_client_lookup (client_id)
 		);`,
 	},
+	{
+		// Authorization Codes for Authentication
+		Name: "Create AuthorizationCodes Table",
+		SQL: `CREATE TABLE IF NOT EXISTS authorization_codes (
+            code VARCHAR(255) PRIMARY KEY,
+            client_id BINARY(16) NOT NULL,
+            user_id BINARY(16) NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );`,
+	},
+	{
+		Name: "Create RefreshTokens Table",
+		SQL: `CREATE TABLE IF NOT EXISTS refresh_tokens (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            token VARCHAR(255) NOT NULL UNIQUE,
+            client_id BINARY(16) NOT NULL,
+            user_id BINARY(16) NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            revoked BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            INDEX idx_token_lookup (token)
+        );`,
+	},
+	{
+		Name: "Create Scopes Table",
+		SQL: `CREATE TABLE IF NOT EXISTS scopes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            scope_name VARCHAR(50) NOT NULL UNIQUE,
+            description VARCHAR(255)
+        );`,
+	},
+	{
+		Name: "Create ClientGrantTypes Table",
+		SQL: `CREATE TABLE IF NOT EXISTS client_grant_types (
+            client_id BINARY(16) NOT NULL,
+            grant_type ENUM(
+				'authorization_code', 
+				'refresh_token', 
+				'client_credentials'
+			) NOT NULL,
+            PRIMARY KEY (client_id, grant_type),
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        );`,
+	},
 }
