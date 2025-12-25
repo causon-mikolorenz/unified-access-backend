@@ -54,7 +54,9 @@ func ConnectToDB() (*sql.DB, error) {
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	if err = db.Ping(); err != nil {
+		db.Close()
 		fmt.Errorf("Error pinging the database: ", err)
+
 		return nil, err
 	}
 
