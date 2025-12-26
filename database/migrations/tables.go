@@ -106,7 +106,9 @@ var Tables = []Migration{
             expires_at TIMESTAMP NOT NULL,
             used BOOLEAN DEFAULT FALSE,
             FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+			INDEX idx_code_lookup (code),
+			INDEX idx_code_expiry (expires_at)
         );`,
 	},
 	{
@@ -120,7 +122,8 @@ var Tables = []Migration{
             revoked BOOLEAN DEFAULT FALSE,
             FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            INDEX idx_token_lookup (token)
+            INDEX idx_token_lookup (token),
+			INDEX idx_expiry_lookup (expires_at)
         );`,
 	},
 	{
