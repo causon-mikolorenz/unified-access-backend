@@ -86,6 +86,17 @@ var Tables = []Migration{
 		);`,
 	},
 	{
+		Name: "Create IdPSessions Table",
+		SQL: `CREATE TABLE IF NOT EXISTS idp_sessions (
+			session_id VARCHAR(255) PRIMARY KEY,
+			user_id BINARY(16) NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			expires_at TIMESTAMP NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+			INDEX idx_session_expiry (expires_at)
+		);`,
+	},
+	{
 		// Authorization Codes for Authentication
 		Name: "Create AuthorizationCodes Table",
 		SQL: `CREATE TABLE IF NOT EXISTS authorization_codes (
