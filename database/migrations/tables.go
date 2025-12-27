@@ -22,8 +22,8 @@ var Tables = []Migration{
 				'suspended', 
 				'deleted'
 			) DEFAULT 'active',
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW() ON UPDATE NOW(),
 			deleted_at TIMESTAMP NULL
 		);`,
 	},
@@ -33,8 +33,8 @@ var Tables = []Migration{
 			id INT AUTO_INCREMENT PRIMARY KEY,
 			role_name VARCHAR(50) NOT NULL UNIQUE,
 			description VARCHAR(255),
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW() ON UPDATE NOW(),
 			deleted_at TIMESTAMP NULL
 		);`,
 	},
@@ -43,7 +43,7 @@ var Tables = []Migration{
 		SQL: `CREATE TABLE IF NOT EXISTS user_roles (
 			user_id BINARY(16),
 			role_id INT,
-			assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			assigned_at TIMESTAMP DEFAULT NOW(),
 			PRIMARY KEY (user_id, role_id),
 			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 			FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
@@ -56,7 +56,7 @@ var Tables = []Migration{
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
 			user_id BINARY(16),
 			action VARCHAR(100) NOT NULL,
-			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			timestamp TIMESTAMP DEFAULT NOW(),
 			details TEXT,
 			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
 			INDEX idx_user_action (user_id, action)
@@ -69,8 +69,8 @@ var Tables = []Migration{
 			id BINARY(16) PRIMARY KEY,
 			client_name VARCHAR(100) NOT NULL,
 			client_secret VARCHAR(255) NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW() ON UPDATE NOW(),
 			deleted_at TIMESTAMP NULL
 		);`,
 	},
@@ -81,7 +81,7 @@ var Tables = []Migration{
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
 			client_id BINARY(16),
 			redirect_url VARCHAR(255) NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			created_at TIMESTAMP DEFAULT NOW(),
 			FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
 			INDEX idx_client_lookup (client_id)
 		);`,
@@ -91,7 +91,7 @@ var Tables = []Migration{
 		SQL: `CREATE TABLE IF NOT EXISTS idp_sessions (
 			session_id VARCHAR(255) PRIMARY KEY,
 			user_id BINARY(16) NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			created_at TIMESTAMP DEFAULT NOW(),
 			expires_at TIMESTAMP NOT NULL,
 			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 			INDEX idx_session_expiry (expires_at)
