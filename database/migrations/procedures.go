@@ -131,4 +131,66 @@ var Procedures = []Migration{
 			COMMIT;
 		END;`,
 	},
+	{
+		Name: "Create Register Client (Service Provider) Procedure",
+		SQL: `
+		-- Drop the procedure first
+		DROP PROCEDURE IF EXISTS RegisterClient;
+		-- Then create to become idempotent
+		CREATE PROCEDURE RegisterClient(
+			IN clientId BINARY(16),
+			IN clientName VARCHAR(100),
+			IN clientSecretHash VARCHAR(255),
+			IN redirectURIs JSON
+		)
+		BEGIN
+			DECLARE EXIT HANDLER FOR SQLEXCEPTION
+			BEGIN
+				ROLLBACK;
+			END;
+			-- Declare loop variables
+			DECLARE i INT DEFAULT 0;
+    		DECLARE uri_count INT DEFAULT JSON_LENGTH(redirectURIs);
+
+			START TRANSACTION;
+			-- Insert new client (service provider)
+			INSERT INTO clients (
+				id,
+				client_name,
+				client_secret
+			)			
+			VALUES (
+				clientId,
+				clientName,
+				clientSecretHash
+			);
+
+			-- Insert redirect URIs by looping through JSON
+			while i < uri_count DO
+				INSERT INTO client_urls (
+					client_id,
+					redirect_url
+				)
+				VALUES (
+					clientId,
+					JSON_UNQUOTE(
+						JSON_EXTRACT(
+							redirectURIs, 
+							CONCAT('$[', i, ']')
+						)
+					)
+				);
+				SET i = i + 1;
+			END WHILE;
+
+			-- Ilagay sa audit logs
+			INSERT INTO audit_logs (user_id, action, details)
+			VALUES (
+				"Admin", 
+				'Register client', 
+				CONCAT('Client ', HEX(clientId), ' was registered.')
+			);
+			COMMIT;
+		END;`,
+	},
 }
