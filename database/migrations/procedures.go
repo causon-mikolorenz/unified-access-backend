@@ -25,7 +25,7 @@ var Procedures = []Migration{
 			SET expires_at = NOW()
 			WHERE user_id = userId AND expires_at > NOW();
 			-- I expire yung auth codes na may connection si user
-			UPDATE auth_codes
+			UPDATE authorization_codes
 			SET expires_at = NOW()
 			WHERE user_id = userId AND expires_at > NOW();
 			-- Ilagay sa audit logs
@@ -113,6 +113,14 @@ var Procedures = []Migration{
 			UPDATE users
 			SET password_hash = newPasswordHash, updated_at = NOW()
 			WHERE id = userId AND deleted_at IS NULL;
+			-- Terminate all active sessions by expiring their refresh tokens
+			UPDATE refresh_tokens
+			SET expires_at = NOW()
+			WHERE user_id = userId AND expires_at > NOW();
+			-- Terminate all active auth codes
+			UPDATE authorization_codes
+			SET expires_at = NOW()
+			WHERE user_id = userId AND expires_at > NOW();
 			-- Ilagay sa audit logs
 			INSERT INTO audit_logs (user_id, action, details)
 			VALUES (
