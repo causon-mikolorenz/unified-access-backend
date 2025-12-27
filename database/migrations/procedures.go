@@ -91,4 +91,36 @@ var Procedures = []Migration{
 			COMMIT;
 		END;`,
 	},
+	{
+		Name: "Update User Password Procedure",
+		SQL: `
+		-- Drop the procedure first
+		DROP PROCEDURE IF EXISTS UpdateUserPassword;
+		-- Then create to become idempotent
+		CREATE PROCEDURE UpdateUserPassword(
+			IN userId BINARY(16),
+			IN newPasswordHash VARCHAR(255)
+		)
+		BEGIN
+			DECLARE EXIT HANDLER FOR SQLEXCEPTION
+			BEGIN
+				ROLLBACK;
+			END;
+
+			START TRANSACTION;
+
+			-- Update user password hash
+			UPDATE users
+			SET password_hash = newPasswordHash, updated_at = NOW()
+			WHERE id = userId AND deleted_at IS NULL;
+			-- Ilagay sa audit logs
+			INSERT INTO audit_logs (user_id, action, details)
+			VALUES (
+				userId, 
+				'Update user password', 
+				CONCAT('User ', HEX(userId), ' password was updated.')
+			);
+			COMMIT;
+		END;`,
+	},
 }
