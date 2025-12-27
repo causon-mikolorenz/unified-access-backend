@@ -7,7 +7,7 @@ var Procedures = []Migration{
 		-- Drop the procedure first
 		DROP PROCEDURE IF EXISTS ArchiveUser;
 		-- Then create to become idempotent
-		CREATE PROCEDUREArchiveUser(IN userId BINARY(16))
+		CREATE PROCEDURE ArchiveUser(IN userId BINARY(16))
 		BEGIN
 			DECLARE EXIT HANDLER FOR SQLEXCEPTION
 			BEGIN
@@ -186,7 +186,7 @@ var Procedures = []Migration{
 			-- Ilagay sa audit logs
 			INSERT INTO audit_logs (user_id, action, details)
 			VALUES (
-				"Admin", 
+				NULL, 
 				'Register client', 
 				CONCAT('Client ', HEX(clientId), ' was registered.')
 			);
