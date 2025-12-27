@@ -12,6 +12,7 @@ var Tables = []Migration{
 			id BINARY(16) PRIMARY KEY,
 			username VARCHAR(255) NOT NULL UNIQUE,
 			first_name VARCHAR(50),
+			middle_name VARCHAR(50),
 			last_name VARCHAR(50),
 			email VARCHAR(100) NOT NULL UNIQUE,
 			password_hash VARCHAR(255) NOT NULL,
