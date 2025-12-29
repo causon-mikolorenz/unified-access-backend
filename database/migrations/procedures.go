@@ -257,4 +257,37 @@ var Procedures = []Migration{
 			SELECT p_user_id AS user_id;
 		END;`,
 	},
+	{
+		Name: "Create Logout Stored Procedure",
+		SQL: `
+		-- Drop the procedure first
+		DROP PROCEDURE IF EXISTS LogoutUser;
+		-- Then create to become idempotent
+		CREATE PROCEDURE LogoutUser(IN userId BINARY(16))
+		BEGIN
+			DECLARE EXIT HANDLER FOR SQLEXCEPTION
+			BEGIN
+				ROLLBACK;
+			END;
+
+			START TRANSACTION;
+
+			-- I expire ang active refresh tokens ni user
+			UPDATE refresh_tokens
+			SET expires_at = NOW()
+			WHERE user_id = userId AND expires_at > NOW();
+			-- I expire yung auth codes na may connection si user
+			UPDATE authorization_codes
+			SET expires_at = NOW()
+			WHERE user_id = userId AND expires_at > NOW();
+			-- Ilagay sa audit logs
+			INSERT INTO audit_logs (user_id, action, details)
+			VALUES (
+				userId, 
+				'logout', 
+				CONCAT('User ', HEX(userId), ' logged out.')
+			);
+			COMMIT;
+		END;`,
+	},
 }
