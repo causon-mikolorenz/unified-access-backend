@@ -16,11 +16,12 @@ func ConnectAdminToDB() (*sql.DB, error) {
 	config := mysql.Config{
 		User:                 os.Getenv("ADMIN_SQL_USER"),
 		Passwd:               os.Getenv("ADMIN_SQL_PASSWORD"),
-		Net:                  "	tcp",
+		Net:                  "tcp",
 		Addr:                 os.Getenv("MYSQL_ADDRESS"),
 		DBName:               os.Getenv("MYSQL_DB_NAME"),
 		AllowNativePasswords: true,
 		ParseTime:            true,
+		MultiStatements:      true,
 	}
 
 	db, err := sql.Open("mysql", config.FormatDSN())
