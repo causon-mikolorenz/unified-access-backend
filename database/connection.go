@@ -56,9 +56,7 @@ func ConnectToDB() (*sql.DB, error) {
 
 	if err = db.Ping(); err != nil {
 		db.Close()
-		fmt.Errorf("Error pinging the database: ", err)
-
-		return nil, err
+		return nil, fmt.Errorf("error pinging the database: %w", err)
 	}
 
 	return db, nil
