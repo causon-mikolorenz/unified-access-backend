@@ -35,6 +35,9 @@ func main() {
 
 		// Do the migrations
 		err = database.RunAllMigrations(adminDatabase)
+		if err != nil {
+			log.Fatalf("Error running database migrations: %v", err)
+		}
 		fmt.Println("Database Migrated Successfully")
 
 		// Exit after migrating
