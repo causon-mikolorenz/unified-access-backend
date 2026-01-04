@@ -203,10 +203,7 @@ var Procedures = []Migration{
 			OUT p_user_id BINARY(16)
 		)
 		BEGIN
-			-- Local variable to hold the user ID during the transaction
 			DECLARE v_user_id BINARY(16) DEFAULT NULL;
-
-			-- Error Handler: Rollback on any SQL error
 			DECLARE EXIT HANDLER FOR SQLEXCEPTION 
 			BEGIN 
 				SET p_user_id = NULL; 
@@ -214,46 +211,32 @@ var Procedures = []Migration{
 			END;
 
 			START TRANSACTION;
-				-- 1. Pre-validation: Check if code exists for this client
-				IF NOT EXISTS (
-					SELECT 1 FROM authorization_codes 
-					WHERE code = p_code AND client_id = p_client_id
-				) THEN
-					SET p_user_id = NULL;
+				SELECT user_id INTO v_user_id 
+				FROM authorization_codes 
+				WHERE code = p_code 
+				AND client_id = p_client_id
+				AND used = FALSE 
+				AND expires_at > NOW()
+				FOR UPDATE;
+
+				IF v_user_id IS NOT NULL THEN
+					UPDATE authorization_codes 
+					SET used = TRUE 
+					WHERE code = p_code;
+
+					INSERT INTO audit_logs (user_id, action, details)
+					VALUES (
+						v_user_id, 
+						'auth_code_exchange', 
+						'Code successfully exchanged.'
+					);
+					
+					SET p_user_id = v_user_id;
 				ELSE
-					-- 2. Main Logic: Check if code is unused and not expired
-					-- We use FOR UPDATE to lock the row and prevent Race Conditions (Replay Attacks)
-					SELECT user_id INTO v_user_id 
-					FROM authorization_codes 
-					WHERE code = p_code 
-					AND used = FALSE 
-					AND expires_at > NOW()
-					FOR UPDATE;
-
-					-- 3. If a valid user_id was found, "burn" the code
-					IF v_user_id IS NOT NULL THEN
-						UPDATE authorization_codes 
-						SET used = TRUE 
-						WHERE code = p_code;
-
-						-- Log the successful exchange
-						INSERT INTO audit_logs (user_id, action, details)
-						VALUES (
-							v_user_id, 
-							'auth_code_exchange', 
-							'Code successfully exchanged for user info.')
-						;
-						
-						-- Assign the found ID to our OUT parameter
-						SET p_user_id = v_user_id;
-					ELSE
-						-- Code exists but is either already used or expired
-						SET p_user_id = NULL;
-					END IF;
+					SET p_user_id = NULL;
 				END IF;
 			COMMIT;
 
-			-- Return the result set so Go can easily scan it
 			SELECT p_user_id AS user_id;
 		END;`,
 	},
