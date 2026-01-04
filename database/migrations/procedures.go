@@ -61,7 +61,7 @@ var Procedures = []Migration{
 
 			START TRANSACTION;
 
-			-- Archive user by setting deleted_at
+			-- Create user by inserting into users table
 			INSERT INTO users (
 				id,
 				username,
