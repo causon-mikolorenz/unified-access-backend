@@ -1,9 +1,9 @@
-CREATE USER 'idp_admin'@'%' IDENTIFIED BY '<idpsqladmin="q1Q!w2W@">';
+CREATE USER 'idp_admin'@'%' IDENTIFIED BY '${IDP_ADMIN_PASSWORD}';
 
 GRANT ALL PRIVILEGES ON identity_db.* TO 'idp_admin'@'%';
 FLUSH PRIVILEGES;
 
-CREATE USER 'idp_svc'@'%' IDENTIFIED BY '<sqlidpsvc="3306user">';
+CREATE USER 'idp_svc'@'%' IDENTIFIED BY '${IDP_SVC_PASSWORD}';
 
 GRANT SELECT, INSERT, UPDATE, EXECUTE ON identity_db.* TO 'idp_svc'@'%';
 FLUSH PRIVILEGES;
