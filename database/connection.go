@@ -49,9 +49,12 @@ func ConnectToDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("Error connecting to database: %w", err)
 	}
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	maxConnections := 25
+	maxLifetime := 5 * time.Minute
+
+	db.SetMaxOpenConns(maxConnections)
+	db.SetMaxIdleConns(maxConnections)
+	db.SetConnMaxLifetime(maxLifetime)
 
 	if err = db.Ping(); err != nil {
 		db.Close()
