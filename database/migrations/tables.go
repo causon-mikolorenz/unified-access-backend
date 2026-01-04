@@ -63,7 +63,7 @@ var Tables = []Migration{
 		);`,
 	},
 	{
-		// Serrvice Providers
+		// Service Providers
 		Name: "Create Clients Table",
 		SQL: `CREATE TABLE IF NOT EXISTS clients (
 			id BINARY(16) PRIMARY KEY,
