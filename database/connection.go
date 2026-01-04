@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -26,7 +25,7 @@ func ConnectAdminToDB() (*sql.DB, error) {
 
 	db, err := sql.Open("mysql", config.FormatDSN())
 	if err != nil {
-		log.Fatal("Error connecting to the database: ", err)
+		return nil, fmt.Errorf("Error connecting to database: %w", err)
 	}
 
 	return db, nil
@@ -47,7 +46,7 @@ func ConnectToDB() (*sql.DB, error) {
 
 	db, err := sql.Open("mysql", config.FormatDSN())
 	if err != nil {
-		log.Fatal("Error connecting to the database: ", err)
+		return nil, fmt.Errorf("Error connecting to database: %w", err)
 	}
 
 	db.SetMaxOpenConns(25)
@@ -56,7 +55,8 @@ func ConnectToDB() (*sql.DB, error) {
 
 	if err = db.Ping(); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("error pinging the database: %w", err)
+
+		return nil, fmt.Errorf("Error pinging the database at %s: %w", config.Addr, err)
 	}
 
 	return db, nil
