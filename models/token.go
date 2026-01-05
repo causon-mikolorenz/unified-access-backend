@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
 
 type AuthorizationCode struct {
 	Code      string    `json:"code" db:"code"`
@@ -17,4 +21,11 @@ type RefreshToken struct {
 	UserId    []byte    `json:"userId" db:"user_id"`
 	ExpiresAt time.Time `json:"expiresAt" db:"expires_at"`
 	Revoked   bool      `json:"revoked" db:"revoked"`
+}
+
+type UserClaims struct {
+	jwt.RegisteredClaims
+	Username string   `json:"name"`
+	Email    string   `json:"email"`
+	Roles    []string `json:"roles"`
 }
