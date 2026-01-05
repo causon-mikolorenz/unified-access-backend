@@ -74,7 +74,7 @@ func (r *UserRepository) UpdateStatus(user *models.User, status models.UserStatu
 
 	_, err := r.db.Exec(query, status, user.ID)
 	if err != nil {
-		return fmt.Errorf("Failed to execute procedure: %w", err)
+		return fmt.Errorf("Failed to update status: %w", err)
 	}
 
 	return err
