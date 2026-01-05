@@ -12,4 +12,6 @@ type User struct {
 	PasswordHash string    `json:"-" db:"password_hash"`
 	Status       string    `json:"status" db:"status"`
 	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+
+	Roles []string `json:"roles" db:"-"`
 }
