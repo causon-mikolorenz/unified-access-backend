@@ -1,10 +1,5 @@
 package migrations
 
-type Migration struct {
-	Name string
-	SQL  string
-}
-
 var Tables = []Migration{
 	{
 		Name: "Create Users Table",
