@@ -76,7 +76,7 @@ func main() {
 
 		// Protected Admin Endpoints (Using the pre-loaded pubKey)
 		admin := v1Group.Group("/admin")
-		admin.Use(middleware.AuthorizeRBAC(pubKey, "admin"))
+		admin.Use(middleware.AuthorizeRBAC(pubKey, "idp:admin"))
 		{
 			admin.GET("/status", func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"status": "IdP is operational"})
