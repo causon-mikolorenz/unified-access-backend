@@ -13,11 +13,14 @@ import (
 	"time"
 
 	v1 "github.com/causon-mikolorenz/unified-access-backend/internal/api/v1"
+	"github.com/causon-mikolorenz/unified-access-backend/internal/auth"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/database"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/middleware"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/repository"
+	"github.com/causon-mikolorenz/unified-access-backend/models"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
@@ -33,10 +36,46 @@ func main() {
 	flag.Parse()
 
 	if *doMigrate {
-		adminDatabase, _ := database.ConnectAdminToDB()
+		// 1. Connect with Admin privileges for schema changes
+		adminDatabase, err := database.ConnectAdminToDB()
+		if err != nil {
+			log.Fatalf("Migration failed: %v", err)
+		}
 		defer adminDatabase.Close()
+
+		// 2. Run Tables Migrations
 		database.RunAllMigrations(adminDatabase)
-		fmt.Println("Database Migrated Successfully")
+		fmt.Println("Schema Migrations Successful.")
+
+		// 3. Setup Repository for Seeding
+		// We use the adminDatabase connection here to ensure we have write perms
+		userRepo := repository.NewUserRepository(adminDatabase)
+
+		// 4. Prepare Admin Data
+		newID := uuid.New()                                             // Generates binary UUID
+		hashedPassword, _ := auth.HashSecret(os.Getenv("APP_PASSWORD")) // Uses your Bcrypt utility
+
+		adminUser := &models.User{
+			ID:           newID[:], // Convert UUID to []byte
+			Username:     "Admin",
+			FirstName:    "idp",
+			MiddleName:   "super",
+			LastName:     "admin",
+			Email:        "example@example.com",
+			PasswordHash: hashedPassword,
+			Roles:        []string{"idp:admin"},
+		}
+
+		// 5. Execute CreateUser Stored Procedure
+		err = userRepo.CreateUser(adminUser)
+		if err != nil {
+			// We log but don't fail if the user already exists (idempotency)
+			log.Printf("Note: Admin user seeding skipped or failed: %v", err)
+		} else {
+			fmt.Println("Super Admin created successfully.")
+		}
+
+		fmt.Println("Database setup complete.")
 		return
 	}
 
