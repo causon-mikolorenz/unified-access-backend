@@ -32,3 +32,6 @@ CompileDaemon
 .DS_Store
 .directory
 .Trash-*
+
+# --- SQL init file ---
+*.sql
