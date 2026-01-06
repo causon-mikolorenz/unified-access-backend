@@ -2,29 +2,41 @@ package v1
 
 import (
 	"bytes"
+	"encoding/hex"
 	"net/http"
-	"os"
+	"strings"
 
 	"github.com/causon-mikolorenz/unified-access-backend/internal/auth"
 	"github.com/gin-gonic/gin"
 )
 
 func (h *AuthHandler) ExchangeToken(c *gin.Context) {
-	// 1. Parse Request (Standard OAuth2 uses form-urlencoded)
+	// 1. Parse Request
 	code := c.PostForm("code")
 	clientIDString := c.PostForm("client_id")
 	clientSecret := c.PostForm("client_secret")
 
-	clientID := []byte(clientIDString)
-
-	// 2. Verify Client Identity
-	validClient, err := h.Repo.VerifyClient(clientID, clientSecret)
-	if err != nil || !validClient {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized_client"})
+	// Convert the incoming client_id string to binary for DB verification
+	// We strip dashes to handle standard UUID strings correctly
+	cleanHex := strings.ReplaceAll(clientIDString, "-", "")
+	clientIDBin, err := hex.DecodeString(cleanHex)
+	if err != nil || len(clientIDBin) != 16 {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": "invalid_client_id_format"},
+		)
 		return
 	}
 
-	// 3. Consume the Code (Atomic transaction in your repo)
+	// 2. Verify Client Identity (using binary ID and Bcrypt secret)
+	validClient, err := h.Repo.VerifyClient(clientIDBin, clientSecret)
+	if err != nil || !validClient {
+		c.JSON(http.StatusUnauthorized,
+			gin.H{"error": "unauthorized_client"},
+		)
+		return
+	}
+
+	// 3. Consume the Code (Atomic transaction handles the 'used_at' check)
 	authCode, err := h.Repo.ExchangeCode(code)
 	if err != nil {
 		c.JSON(http.StatusBadRequest,
@@ -33,27 +45,28 @@ func (h *AuthHandler) ExchangeToken(c *gin.Context) {
 		return
 	}
 
-	// 4. Security Check: Client mismatch
-	// Ensure the client asking for the token is the same one that requested the code
-	if !bytes.Equal(authCode.ClientId, clientID) {
-		c.JSON(http.StatusBadRequest,
+	// 4. Security Check: Ensure this client owns the requested code
+	if !bytes.Equal(authCode.ClientId, clientIDBin) {
+		c.JSON(http.StatusForbidden,
 			gin.H{"error": "invalid_grant", "message": "client mismatch"},
 		)
 		return
 	}
 
-	// 5. Fetch User Claims for the JWT
+	// 5. Fetch User Profile/Claims using the UserID stored in the code
 	claims, _, err := h.Repo.GetClaimsByID(authCode.UserId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
 
-	// 6. Generate the JWT using internal/auth/jwt.go
-	accessToken, err := auth.GenerateToken(os.Getenv("JWT_SECRET"),
-		clientID, *claims)
+	// 6. Generate the JWT (RS256)
+	// We pass the pre-loaded h.PrivateKey from our handler struct
+	accessToken, err := auth.GenerateToken(h.PrivateKey, clientIDBin, *claims)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "failed_to_sign_token"},
+		)
 		return
 	}
 
@@ -61,6 +74,6 @@ func (h *AuthHandler) ExchangeToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": accessToken,
 		"token_type":   "Bearer",
-		"expires_in":   3600, // 1 hour
+		"expires_in":   3600, // 1 hour expiration
 	})
 }
