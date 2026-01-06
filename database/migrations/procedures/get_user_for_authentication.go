@@ -9,7 +9,11 @@ var GetUserForAuthProcedure = migrations.MigrationPart{
         CREATE PROCEDURE GetUserForAuth(IN p_username VARCHAR(255))
         BEGIN
             SELECT 
-                u.id, 
+                u.id,
+				u.email, 
+				u.first_name,
+				u.middle_name,
+				u.last_name,
                 u.username, 
                 u.password_hash, 
                 u.status,
