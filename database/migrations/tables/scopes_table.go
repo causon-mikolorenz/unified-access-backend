@@ -2,7 +2,7 @@ package tables
 
 import "github.com/causon-mikolorenz/unified-access-backend/database/migrations"
 
-var Scopes = migrations.TableMigration{
+var ScopesMigration = migrations.TableMigration{
 	TableName: "scopes",
 	Steps: []migrations.MigrationStep{
 		{
