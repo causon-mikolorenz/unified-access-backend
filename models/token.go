@@ -25,6 +25,7 @@ type RefreshToken struct {
 
 type UserClaims struct {
 	jwt.RegisteredClaims
+	UserID   []byte   `json:"userId"`
 	Username string   `json:"name"`
 	Email    string   `json:"email"`
 	Roles    []string `json:"roles"`
