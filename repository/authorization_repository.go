@@ -46,7 +46,7 @@ func (r *AuthCodeRepository) ExchangeCode(code string) (*models.AuthorizationCod
 	}
 
 	// SECURITY CHECKS
-	if authCode.Used != true {
+	if authCode.UsedAt.Valid {
 		return nil, errors.New("code already exchanged")
 	}
 	if time.Now().After(authCode.ExpiresAt) {
@@ -118,49 +118,42 @@ func (r *AuthCodeRepository) VerifyClient(clientID []byte, clientSecret string) 
 }
 
 // GetClaimsById is similar to GetUserForAuth but uses user UUID
-func (r *AuthCodeRepository) GetClaimsByID(userId []byte) (*models.UserClaims,
-	string, error,
-) {
+func (r *AuthCodeRepository) GetClaimsByID(userId []byte) (*models.UserClaims, error) {
 	var row struct {
-		ID           []byte `db:"id"`
-		Username     string `db:"username"`
-		FirstName    string `db:"first_name"`
-		MiddleName   string `db:"middle_name"`
-		LastName     string `db:"last_name"`
-		Email        string `db:"email"`
-		PasswordHash string `db:"password_hash"`
-		Status       string `db:"status"`
-		RolesString  string `db:"roles"` // The GROUP_CONCAT result
+		ID          []byte `db:"id"`
+		Username    string `db:"username"`
+		FirstName   string `db:"first_name"`
+		MiddleName  string `db:"middle_name"`
+		LastName    string `db:"last_name"`
+		Email       string `db:"email"`
+		Status      string `db:"status"`
+		RolesString string `db:"roles"`
 	}
 
+	// FIX: Filter by u.id and use ? placeholder
 	query := `
-		SELECT 
-			u.id,
-			u.email, 
-			u.first_name,
-			u.middle_name,
-			u.last_name,
-			u.username, 
-			u.password_hash, 
-			u.status,
-			-- Return roles as a comma-separated string
-			IFNULL((SELECT GROUP_CONCAT(r.role_name) 
-			FROM user_roles ur 
-			JOIN roles r ON ur.role_id = r.id 
-			WHERE ur.user_id = u.id), '') as roles
-		FROM users u
-		WHERE u.username = p_username AND u.status != 'deleted'
-		LIMIT 1;
-	`
+        SELECT 
+            u.id, u.email, u.first_name, u.middle_name, u.last_name,
+            u.username, u.status,
+            IFNULL((SELECT GROUP_CONCAT(r.role_name) 
+            FROM user_roles ur 
+            JOIN roles r ON ur.role_id = r.id 
+            WHERE ur.user_id = u.id), '') as roles
+        FROM users u
+        WHERE u.id = ? AND u.status != 'deleted'
+        LIMIT 1`
+
 	err := r.db.Get(&row, query, userId)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	// Convert comma-separated string back to a slice for UserClaims
-	roles := strings.Split(row.RolesString, ",")
+	roles := []string{}
+	if row.RolesString != "" {
+		roles = strings.Split(row.RolesString, ",")
+	}
 
-	claims := &models.UserClaims{
+	return &models.UserClaims{
 		UserID:     row.ID,
 		Username:   row.Username,
 		Email:      row.Email,
@@ -168,7 +161,11 @@ func (r *AuthCodeRepository) GetClaimsByID(userId []byte) (*models.UserClaims,
 		MiddleName: row.MiddleName,
 		LastName:   row.LastName,
 		Roles:      roles,
-	}
+	}, nil
+}
 
-	return claims, row.PasswordHash, nil
+func NewAuthCodeRepository(db *sqlx.DB) *AuthCodeRepository {
+	return &AuthCodeRepository{
+		db: db,
+	}
 }

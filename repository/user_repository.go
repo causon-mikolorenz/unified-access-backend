@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/causon-mikolorenz/unified-access-backend/models"
@@ -51,9 +52,16 @@ func (r *UserRepository) GetUserById(id []byte) (*models.User, error) {
 }
 
 func (r *UserRepository) CreateUser(u *models.User) error {
-	query := `CALL CreateUser(?, ?, ?, ?, ?, ?, ?)`
+	// 1. Convert the roles slice into a JSON string
+	rolesJSON, err := json.Marshal(u.Roles)
+	if err != nil {
+		return fmt.Errorf("failed to marshal user roles: %w", err)
+	}
 
-	_, err := r.db.Exec(query,
+	query := `CALL CreateUser(?, ?, ?, ?, ?, ?, ?, ?)`
+
+	// 2. Pass rolesJSON as the 8th argument
+	_, err = r.db.Exec(query,
 		u.ID,
 		u.Username,
 		u.FirstName,
@@ -61,12 +69,13 @@ func (r *UserRepository) CreateUser(u *models.User) error {
 		u.LastName,
 		u.Email,
 		u.PasswordHash,
+		rolesJSON,
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to execute procedure: %w", err)
+		return fmt.Errorf("failed to execute procedure: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 func (r *UserRepository) UpdateStatus(user *models.User, status models.UserStatus) error {

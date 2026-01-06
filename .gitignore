@@ -35,3 +35,6 @@ CompileDaemon
 
 # --- SQL init file ---
 *.sql
+
+# --- RSA Keys ---
+/certs/
