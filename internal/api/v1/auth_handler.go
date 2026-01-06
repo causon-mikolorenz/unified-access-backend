@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"crypto/rsa"
 	"net/http"
 
 	"github.com/causon-mikolorenz/unified-access-backend/internal/auth"
@@ -9,7 +10,8 @@ import (
 )
 
 type AuthHandler struct {
-	Repo *repository.AuthCodeRepository
+	Repo       *repository.AuthCodeRepository
+	PrivateKey *rsa.PrivateKey
 }
 
 func (h *AuthHandler) LoginAndAuthorize(c *gin.Context) {
