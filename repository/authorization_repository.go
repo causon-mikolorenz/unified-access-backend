@@ -66,17 +66,21 @@ func (r *AuthCodeRepository) ExchangeCode(code string) (*models.AuthorizationCod
 	return &authCode, nil
 }
 
-func (r *AuthCodeRepository) GetUserForAuth(username string) (*models.UserClaims, string, error) {
+func (r *AuthCodeRepository) GetUserForAuth(email string) (*models.UserClaims, string, error) {
 	var row struct {
 		ID           []byte `db:"id"`
 		Username     string `db:"username"`
+		FirstName    string `db:"first_name"`
+		MiddleName   string `db:"middle_name"`
+		LastName     string `db:"last_name"`
+		Email        string `db:"email"`
 		PasswordHash string `db:"password_hash"`
 		Status       string `db:"status"`
 		RolesString  string `db:"roles"` // The GROUP_CONCAT result
 	}
 
 	query := `CALL GetUserForAuth(?)`
-	err := r.db.Get(&row, query, username)
+	err := r.db.Get(&row, query, email)
 	if err != nil {
 		return nil, "", err
 	}
@@ -85,8 +89,13 @@ func (r *AuthCodeRepository) GetUserForAuth(username string) (*models.UserClaims
 	roles := strings.Split(row.RolesString, ",")
 
 	claims := &models.UserClaims{
-		UserID: row.ID,
-		Roles:  roles,
+		UserID:     row.ID,
+		Username:   row.Username,
+		Email:      row.Email,
+		FirstName:  row.FirstName,
+		MiddleName: row.MiddleName,
+		LastName:   row.LastName,
+		Roles:      roles,
 	}
 
 	return claims, row.PasswordHash, nil
