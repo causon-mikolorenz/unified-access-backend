@@ -1,7 +1,8 @@
 package auth
 
 import (
-	"encoding/hex" // Required for binary to hex string conversion
+	"crypto/rsa" // Required for the *rsa.PrivateKey type
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -9,20 +10,20 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// GenerateToken creates a signed OIDC JWT.
-// We accept clientID as []byte to match your repository, but convert to string for the JWT.
-func GenerateToken(secretKey string, clientID []byte, claims models.UserClaims) (string, error) {
+// GenerateToken creates a signed OIDC JWT using RS256.
+// It accepts the pre-loaded privateKey object for maximum performance.
+func GenerateToken(privateKey *rsa.PrivateKey,
+	clientID []byte, claims models.UserClaims,
+) (string, error) {
 	now := time.Now()
 
-	// 1. Convert the binary UUID to a standard hex string.
-	// This ensures the "aud" (Audience) claim is readable by the Service Provider.
+	// 1. Convert the binary UUID to a standard hex string for the 'aud' claim.
 	clientIDStr := hex.EncodeToString(clientID)
 
 	// 2. Set the standard OIDC registered claims
 	claims.RegisteredClaims = jwt.RegisteredClaims{
-		Subject: claims.ID,
-		Issuer:  "unified-access-idp",
-		// Audience expects []string. We wrap our hex string in the slice.
+		Subject:   claims.ID, // Assuming this is the User's unique string ID
+		Issuer:    "unified-access-idp",
 		Audience:  jwt.ClaimStrings{clientIDStr},
 		ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
 		IssuedAt:  jwt.NewNumericDate(now),
@@ -30,10 +31,11 @@ func GenerateToken(secretKey string, clientID []byte, claims models.UserClaims) 
 		ID:        fmt.Sprintf("%d", now.UnixNano()),
 	}
 
-	// 3. Create and sign the token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// 3. Create the token using RS256 (Asymmetric)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 
-	signedToken, err := token.SignedString([]byte(secretKey))
+	// 4. Sign the token using the RSA Private Key
+	signedToken, err := token.SignedString(privateKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign JWT: %w", err)
 	}
