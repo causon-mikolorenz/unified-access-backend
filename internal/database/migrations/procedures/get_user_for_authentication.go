@@ -1,6 +1,6 @@
 package procedures
 
-import "github.com/causon-mikolorenz/unified-access-backend/database/migrations"
+import "github.com/causon-mikolorenz/unified-access-backend/internal/database/migrations"
 
 var GetUserForAuthProcedure = migrations.MigrationPart{
 	Name: "get-user-for-auth-procedure",

@@ -1,6 +1,6 @@
 package tables
 
-import "github.com/causon-mikolorenz/unified-access-backend/database/migrations"
+import "github.com/causon-mikolorenz/unified-access-backend/internal/database/migrations"
 
 var AuthorizationCodesMigration = migrations.TableMigration{
 	TableName: "authorization_codes",

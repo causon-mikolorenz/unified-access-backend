@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/causon-mikolorenz/unified-access-backend/internal/auth"
-	"github.com/causon-mikolorenz/unified-access-backend/repository"
+	"github.com/causon-mikolorenz/unified-access-backend/internal/repository"
 	"github.com/gin-gonic/gin"
 )
 

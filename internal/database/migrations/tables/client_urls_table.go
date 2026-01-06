@@ -1,6 +1,6 @@
 package tables
 
-import "github.com/causon-mikolorenz/unified-access-backend/database/migrations"
+import "github.com/causon-mikolorenz/unified-access-backend/internal/database/migrations"
 
 var ClientUrlsMigration = migrations.TableMigration{
 	TableName: "client_urls",

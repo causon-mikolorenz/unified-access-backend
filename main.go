@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/causon-mikolorenz/unified-access-backend/database"
 	v1 "github.com/causon-mikolorenz/unified-access-backend/internal/api/v1"
+	"github.com/causon-mikolorenz/unified-access-backend/internal/database"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/middleware"
-	"github.com/causon-mikolorenz/unified-access-backend/repository"
+	"github.com/causon-mikolorenz/unified-access-backend/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"

@@ -3,9 +3,9 @@ package database
 import (
 	"log"
 
-	"github.com/causon-mikolorenz/unified-access-backend/database/migrations"
-	"github.com/causon-mikolorenz/unified-access-backend/database/migrations/procedures"
-	"github.com/causon-mikolorenz/unified-access-backend/database/migrations/tables"
+	"github.com/causon-mikolorenz/unified-access-backend/internal/database/migrations"
+	"github.com/causon-mikolorenz/unified-access-backend/internal/database/migrations/procedures"
+	"github.com/causon-mikolorenz/unified-access-backend/internal/database/migrations/tables"
 	"github.com/jmoiron/sqlx"
 )
 
