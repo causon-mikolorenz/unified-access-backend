@@ -16,5 +16,15 @@ var RolesMigration = migrations.TableMigration{
 				deleted_at TIMESTAMP NULL
 			);`,
 		},
+		{
+			ID: "insert-admin-role",
+			SQL: `
+				INSERT IGNORE INTO roles (role_name, description)
+				VALUES (
+					'idp:admin', 
+					'Admin who oversees the whole Identity Provider'
+				);
+			`,
+		},
 	},
 }
