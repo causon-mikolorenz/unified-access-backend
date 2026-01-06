@@ -11,7 +11,7 @@ type UserRepository struct {
 	db *sqlx.DB
 }
 
-func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
+func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	query := `
 		SELECT 
@@ -31,7 +31,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	return &user, err
 }
 
-func (r *UserRepository) GetById(id []byte) (*models.User, error) {
+func (r *UserRepository) GetUserById(id []byte) (*models.User, error) {
 	var user models.User
 	query := `
 		SELECT 
@@ -50,7 +50,7 @@ func (r *UserRepository) GetById(id []byte) (*models.User, error) {
 	return &user, err
 }
 
-func (r *UserRepository) Create(u *models.User) error {
+func (r *UserRepository) CreateUser(u *models.User) error {
 	query := `CALL CreateUser(?, ?, ?, ?, ?, ?, ?)`
 
 	_, err := r.db.Exec(query,
