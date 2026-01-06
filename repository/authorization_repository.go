@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/causon-mikolorenz/unified-access-backend/internal/auth"
 	"github.com/causon-mikolorenz/unified-access-backend/models"
 	"github.com/jmoiron/sqlx"
 )
@@ -99,4 +100,19 @@ func (r *AuthCodeRepository) GetUserForAuth(email string) (*models.UserClaims, s
 	}
 
 	return claims, row.PasswordHash, nil
+}
+
+// VerifyClient checks if the client credentials are valid
+func (r *AuthCodeRepository) VerifyClient(clientID []byte, clientSecret string) (bool, error) {
+	var storedHash string
+	query := `SELECT client_secret FROM clients WHERE id = ? AND status = 'active'`
+
+	err := r.db.Get(&storedHash, query, clientID)
+	if err != nil {
+		return false, err
+	}
+
+	// Use internal/auth/hash.go utility
+	err = auth.CompareSecret(storedHash, clientSecret)
+	return err == nil, nil
 }
