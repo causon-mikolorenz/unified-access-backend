@@ -1,17 +1,18 @@
 package models
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthorizationCode struct {
-	Code      string    `json:"code" db:"code"`
-	ClientId  []byte    `json:"clientId" db:"client_id"`
-	UserId    []byte    `json:"userId" db:"user_id"`
-	ExpiresAt time.Time `json:"expiresAt" db:"expires_at"`
-	Used      bool      `json:"used" db:"used"`
+	Code      string       `json:"code" db:"code"`
+	ClientId  []byte       `json:"clientId" db:"client_id"`
+	UserId    []byte       `json:"userId" db:"user_id"`
+	ExpiresAt time.Time    `json:"expiresAt" db:"expires_at"`
+	UsedAt    sql.NullTime `json:"usedAt" db:"used_at"`
 }
 
 type RefreshToken struct {
