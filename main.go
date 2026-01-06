@@ -34,7 +34,7 @@ func main() {
 		defer adminDatabase.Close()
 
 		// Do the migrations
-		err = database.RunAllMigrations(adminDatabase)
+		database.RunAllMigrations(adminDatabase)
 		if err != nil {
 			log.Fatalf("Error running database migrations: %v", err)
 		}

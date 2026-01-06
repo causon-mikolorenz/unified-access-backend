@@ -1,15 +1,15 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 )
 
-func ConnectAdminToDB() (*sql.DB, error) {
+func ConnectAdminToDB() (*sqlx.DB, error) {
 	// Implementation for connecting to the database as admin for migration
 	var err error
 	config := mysql.Config{
@@ -23,7 +23,7 @@ func ConnectAdminToDB() (*sql.DB, error) {
 		MultiStatements:      true,
 	}
 
-	db, err := sql.Open("mysql", config.FormatDSN())
+	db, err := sqlx.Open("mysql", config.FormatDSN())
 	if err != nil {
 		return nil, fmt.Errorf("Error connecting to database: %w", err)
 	}
@@ -31,7 +31,7 @@ func ConnectAdminToDB() (*sql.DB, error) {
 	return db, nil
 }
 
-func ConnectToDB() (*sql.DB, error) {
+func ConnectToDB() (*sqlx.DB, error) {
 	// Implementation for connecting to the database as the application service
 	var err error
 	config := mysql.Config{
@@ -44,7 +44,7 @@ func ConnectToDB() (*sql.DB, error) {
 		ParseTime:            true,
 	}
 
-	db, err := sql.Open("mysql", config.FormatDSN())
+	db, err := sqlx.Open("mysql", config.FormatDSN())
 	if err != nil {
 		return nil, fmt.Errorf("Error connecting to database: %w", err)
 	}
