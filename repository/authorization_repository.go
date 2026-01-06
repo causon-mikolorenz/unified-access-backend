@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/causon-mikolorenz/unified-access-backend/models"
@@ -63,4 +64,30 @@ func (r *AuthCodeRepository) ExchangeCode(code string) (*models.AuthorizationCod
 	}
 
 	return &authCode, nil
+}
+
+func (r *AuthCodeRepository) GetUserForAuth(username string) (*models.UserClaims, string, error) {
+	var row struct {
+		ID           []byte `db:"id"`
+		Username     string `db:"username"`
+		PasswordHash string `db:"password_hash"`
+		Status       string `db:"status"`
+		RolesString  string `db:"roles"` // The GROUP_CONCAT result
+	}
+
+	query := `CALL GetUserForAuth(?)`
+	err := r.db.Get(&row, query, username)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Convert comma-separated string back to a slice for UserClaims
+	roles := strings.Split(row.RolesString, ",")
+
+	claims := &models.UserClaims{
+		UserID: row.ID,
+		Roles:  roles,
+	}
+
+	return claims, row.PasswordHash, nil
 }
