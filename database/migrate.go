@@ -68,6 +68,7 @@ func RunAllMigrations(db *sqlx.DB) {
 		procedures.UpdateUserPasswordProcedure,
 		procedures.LogoutUserProcedure,
 		procedures.RotateRefreshTokenProcedure,
+		procedures.GetUserForAuthProcedure,
 	}
 
 	allMigrations := append(parentTables, childTables...)
