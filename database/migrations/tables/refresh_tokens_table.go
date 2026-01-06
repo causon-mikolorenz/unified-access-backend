@@ -21,5 +21,12 @@ var RefreshTokensMigration = migrations.TableMigration{
 				INDEX idx_expiry_lookup (expires_at)
 			);`,
 		},
+		{
+			ID: "add-replaced-by",
+			SQL: `
+				ALTER TABLE refresh_tokens 
+				ADD COLUMN replaced_by VARCHAR(255) NULL;
+			`,
+		},
 	},
 }
