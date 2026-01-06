@@ -3,8 +3,10 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 
+	"github.com/causon-mikolorenz/unified-access-backend/internal/auth"
 	"github.com/causon-mikolorenz/unified-access-backend/models"
 	"github.com/jmoiron/sqlx"
 )
@@ -63,4 +65,110 @@ func (r *AuthCodeRepository) ExchangeCode(code string) (*models.AuthorizationCod
 	}
 
 	return &authCode, nil
+}
+
+func (r *AuthCodeRepository) GetUserForAuth(email string) (*models.UserClaims, string, error) {
+	var row struct {
+		ID           []byte `db:"id"`
+		Username     string `db:"username"`
+		FirstName    string `db:"first_name"`
+		MiddleName   string `db:"middle_name"`
+		LastName     string `db:"last_name"`
+		Email        string `db:"email"`
+		PasswordHash string `db:"password_hash"`
+		Status       string `db:"status"`
+		RolesString  string `db:"roles"` // The GROUP_CONCAT result
+	}
+
+	query := `CALL GetUserForAuth(?)`
+	err := r.db.Get(&row, query, email)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Convert comma-separated string back to a slice for UserClaims
+	roles := strings.Split(row.RolesString, ",")
+
+	claims := &models.UserClaims{
+		UserID:     row.ID,
+		Username:   row.Username,
+		Email:      row.Email,
+		FirstName:  row.FirstName,
+		MiddleName: row.MiddleName,
+		LastName:   row.LastName,
+		Roles:      roles,
+	}
+
+	return claims, row.PasswordHash, nil
+}
+
+// VerifyClient checks if the client credentials are valid
+func (r *AuthCodeRepository) VerifyClient(clientID []byte, clientSecret string) (bool, error) {
+	var storedHash string
+	query := `SELECT client_secret FROM clients WHERE id = ? AND status = 'active'`
+
+	err := r.db.Get(&storedHash, query, clientID)
+	if err != nil {
+		return false, err
+	}
+
+	// Use internal/auth/hash.go utility
+	err = auth.CompareSecret(storedHash, clientSecret)
+	return err == nil, nil
+}
+
+// GetClaimsById is similar to GetUserForAuth but uses user UUID
+func (r *AuthCodeRepository) GetClaimsByID(userId []byte) (*models.UserClaims,
+	string, error,
+) {
+	var row struct {
+		ID           []byte `db:"id"`
+		Username     string `db:"username"`
+		FirstName    string `db:"first_name"`
+		MiddleName   string `db:"middle_name"`
+		LastName     string `db:"last_name"`
+		Email        string `db:"email"`
+		PasswordHash string `db:"password_hash"`
+		Status       string `db:"status"`
+		RolesString  string `db:"roles"` // The GROUP_CONCAT result
+	}
+
+	query := `
+		SELECT 
+			u.id,
+			u.email, 
+			u.first_name,
+			u.middle_name,
+			u.last_name,
+			u.username, 
+			u.password_hash, 
+			u.status,
+			-- Return roles as a comma-separated string
+			IFNULL((SELECT GROUP_CONCAT(r.role_name) 
+			FROM user_roles ur 
+			JOIN roles r ON ur.role_id = r.id 
+			WHERE ur.user_id = u.id), '') as roles
+		FROM users u
+		WHERE u.username = p_username AND u.status != 'deleted'
+		LIMIT 1;
+	`
+	err := r.db.Get(&row, query, userId)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Convert comma-separated string back to a slice for UserClaims
+	roles := strings.Split(row.RolesString, ",")
+
+	claims := &models.UserClaims{
+		UserID:     row.ID,
+		Username:   row.Username,
+		Email:      row.Email,
+		FirstName:  row.FirstName,
+		MiddleName: row.MiddleName,
+		LastName:   row.LastName,
+		Roles:      roles,
+	}
+
+	return claims, row.PasswordHash, nil
 }
