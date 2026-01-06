@@ -1,21 +1,26 @@
 package database
 
 import (
+	"context"
 	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 )
 
-func StartJanitor(db *sqlx.DB, interval time.Duration) {
+func StartJanitor(ctx context.Context, db *sqlx.DB, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 
-	// Run in a separate goroutine
 	go func() {
+		defer ticker.Stop()
+		log.Println("[Janitor] Started background cleanup task")
 		for {
 			select {
 			case <-ticker.C:
 				cleanExpiredRecords(db)
+			case <-ctx.Done(): // Listen for the shutdown signal
+				log.Println("[Janitor] Shutting down background task...")
+				return
 			}
 		}
 	}()
