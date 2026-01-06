@@ -28,4 +28,5 @@ type UserClaims struct {
 	Username string   `json:"name"`
 	Email    string   `json:"email"`
 	Roles    []string `json:"roles"`
+	Scopes   []string `json:"scopes"`
 }
