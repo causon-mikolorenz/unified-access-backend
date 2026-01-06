@@ -54,7 +54,7 @@ func (h *AuthHandler) ExchangeToken(c *gin.Context) {
 	}
 
 	// 5. Fetch User Profile/Claims using the UserID stored in the code
-	claims, _, err := h.Repo.GetClaimsByID(authCode.UserId)
+	claims, err := h.Repo.GetClaimsByID(authCode.UserId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
