@@ -15,9 +15,15 @@ type AuthCodeRepository struct {
 	db *sqlx.DB
 }
 
+const (
+	YEARS  = 0
+	MONTHS = 0
+	DAYS   = 7
+)
+
 // StoreCode saves the generated code
 func (r *AuthCodeRepository) StoreCode(code string, userID []byte, clientID []byte, redirectURI string) error {
-	query := `INSERT INTO auth_codes (code, user_id, client_id, redirect_uri, expires_at) 
+	query := `INSERT INTO authorization_codes (code, user_id, client_id, redirect_uri, expires_at) 
               VALUES (?, ?, ?, ?, ?)`
 	expiresAt := time.Now().Add(5 * time.Minute) // Codes are very short-lived
 	_, err := r.db.Exec(query, code, userID, clientID, redirectURI, expiresAt)
@@ -35,7 +41,7 @@ func (r *AuthCodeRepository) ExchangeCode(code string) (*models.AuthorizationCod
 	var authCode models.AuthorizationCode
 	// FOR UPDATE locks the row so no other process can read/write it until we are done
 	query := `SELECT code, user_id, client_id, redirect_uri, expires_at, used_at 
-              FROM auth_codes WHERE code = ? FOR UPDATE`
+              FROM authorization_codes WHERE code = ? FOR UPDATE`
 
 	err = tx.Get(&authCode, query, code)
 	if err != nil {
@@ -54,7 +60,7 @@ func (r *AuthCodeRepository) ExchangeCode(code string) (*models.AuthorizationCod
 	}
 
 	// CONSUME: Mark as used
-	_, err = tx.Exec("UPDATE auth_codes SET used_at = NOW() WHERE code = ?", code)
+	_, err = tx.Exec("UPDATE authorization_codes SET used_at = NOW() WHERE code = ?", code)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +83,7 @@ func (r *AuthCodeRepository) GetUserForAuth(email string) (*models.UserClaims, s
 		Email        string `db:"email"`
 		PasswordHash string `db:"password_hash"`
 		Status       string `db:"status"`
-		RolesString  string `db:"roles"` // The GROUP_CONCAT result
+		RolesString  string `db:"roles"`
 	}
 
 	query := `CALL GetUserForAuth(?)`
@@ -105,7 +111,7 @@ func (r *AuthCodeRepository) GetUserForAuth(email string) (*models.UserClaims, s
 // VerifyClient checks if the client credentials are valid
 func (r *AuthCodeRepository) VerifyClient(clientID []byte, clientSecret string) (bool, error) {
 	var storedHash string
-	query := `SELECT client_secret FROM clients WHERE id = ? AND status = 'active'`
+	query := `SELECT client_secret FROM clients WHERE id = ?`
 
 	err := r.db.Get(&storedHash, query, clientID)
 	if err != nil {
@@ -148,9 +154,11 @@ func (r *AuthCodeRepository) GetClaimsByID(userId []byte) (*models.UserClaims, e
 		return nil, err
 	}
 
-	roles := []string{}
+	var roles []string
 	if row.RolesString != "" {
 		roles = strings.Split(row.RolesString, ",")
+	} else {
+		roles = []string{}
 	}
 
 	return &models.UserClaims{
@@ -162,6 +170,71 @@ func (r *AuthCodeRepository) GetClaimsByID(userId []byte) (*models.UserClaims, e
 		LastName:   row.LastName,
 		Roles:      roles,
 	}, nil
+}
+
+func (r *AuthCodeRepository) StoreRefreshToken(token string, userID []byte, clientID []byte) error {
+	expirationDate := time.Now().AddDate(YEARS, MONTHS, DAYS)
+	query := `
+		INSERT INTO refresh_tokens(token, client_id, user_id, expires_at)
+		VALUES (?, ?, ?, ?)
+	`
+	_, err := r.db.Exec(query, token, clientID, userID, expirationDate)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *AuthCodeRepository) RotateRefreshToken(oldToken, newToken string) error {
+	newExpiresAt := time.Now().AddDate(YEARS, MONTHS, DAYS)
+
+	query := `CALL RotateRefreshToken(?, ?, ?)`
+	_, err := r.db.Exec(query, oldToken, newToken, newExpiresAt)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *AuthCodeRepository) GetIDsFromToken(token string) ([]byte, []byte, error) {
+	var IDs struct {
+		UserID   []byte `db:"user_id"`
+		ClientID []byte `db:"client_id"`
+	}
+
+	query := `
+        SELECT user_id, client_id FROM refresh_tokens
+        WHERE token = ?
+    `
+
+	err := r.db.Get(&IDs, query, token)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return IDs.UserID, IDs.ClientID, nil
+}
+
+func (r *AuthCodeRepository) GetClientRedirectURI(clientID []byte) (string, error) {
+	var registeredURI string
+	query := `SELECT redirect_uri FROM clients WHERE id = ?`
+
+	err := r.db.Get(&registeredURI, query, clientID)
+	if err != nil {
+		return "", err
+	}
+	return registeredURI, nil
+}
+
+func (r *AuthCodeRepository) RevokeTokens(userID []byte) error {
+	query := `CALL LogoutUser(?)`
+	_, err := r.db.Exec(query, userID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewAuthCodeRepository(db *sqlx.DB) *AuthCodeRepository {

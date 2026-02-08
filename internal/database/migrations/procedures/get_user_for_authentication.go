@@ -6,7 +6,7 @@ var GetUserForAuthProcedure = migrations.MigrationPart{
 	Name: "get-user-for-auth-procedure",
 	SQL: `
         DROP PROCEDURE IF EXISTS GetUserForAuth;
-        CREATE PROCEDURE GetUserForAuth(IN p_username VARCHAR(255))
+        CREATE PROCEDURE GetUserForAuth(IN p_email VARCHAR(255))
         BEGIN
             SELECT 
                 u.id,
@@ -23,7 +23,7 @@ var GetUserForAuthProcedure = migrations.MigrationPart{
                  JOIN roles r ON ur.role_id = r.id 
                  WHERE ur.user_id = u.id), '') as roles
             FROM users u
-            WHERE u.username = p_username AND u.status != 'deleted'
+            WHERE u.email = p_email AND u.status != 'deleted'
             LIMIT 1;
         END;`,
 }
