@@ -199,22 +199,42 @@ func (r *AuthCodeRepository) RotateRefreshToken(oldToken, newToken string) error
 }
 
 func (r *AuthCodeRepository) GetIDsFromToken(token string) ([]byte, []byte, error) {
-    var IDs struct {
-        UserID   []byte `db:"user_id"`
-        ClientID []byte `db:"client_id"`
-    }
+	var IDs struct {
+		UserID   []byte `db:"user_id"`
+		ClientID []byte `db:"client_id"`
+	}
 
-    query := `
+	query := `
         SELECT user_id, client_id FROM refresh_tokens
         WHERE token = ?
     `
 
-    err := r.db.Get(&IDs, query, token)
-    if err != nil {
-        return nil, nil, err
-    }
+	err := r.db.Get(&IDs, query, token)
+	if err != nil {
+		return nil, nil, err
+	}
 
-    return IDs.UserID, IDs.ClientID, nil
+	return IDs.UserID, IDs.ClientID, nil
+}
+
+func (r *AuthCodeRepository) GetClientRedirectURI(clientID []byte) (string, error) {
+	var registeredURI string
+	query := `SELECT redirect_uri FROM clients WHERE id = ?`
+
+	err := r.db.Get(&registeredURI, query, clientID)
+	if err != nil {
+		return "", err
+	}
+	return registeredURI, nil
+}
+
+func (r *AuthCodeRepository) RevokeTokens(userID []byte) error {
+	query := `CALL LogoutUser(?)`
+	_, err := r.db.Exec(query, userID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewAuthCodeRepository(db *sqlx.DB) *AuthCodeRepository {
