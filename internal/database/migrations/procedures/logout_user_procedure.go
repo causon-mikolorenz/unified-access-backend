@@ -41,7 +41,13 @@ var LogoutUserProcedure = migrations.MigrationPart{
                 'logout', 
                 CONCAT(
 					'User ', 
-					BINARY_TO_UUID(p_userId), 
+					LOWER(CONCAT(
+                        HEX(SUBSTRING(p_userId, 1, 4)), '-',
+                        HEX(SUBSTRING(p_userId, 5, 2)), '-',
+                        HEX(SUBSTRING(p_userId, 7, 2)), '-',
+                        HEX(SUBSTRING(p_userId, 9, 2)), '-',
+                        HEX(SUBSTRING(p_userId, 11, 6))
+                    )), 
 					' performed a global logout.'
 				)
             );
