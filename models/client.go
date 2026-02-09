@@ -25,12 +25,6 @@ type Client struct {
 	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
 }
 
-type ClientUrl struct {
-	ID          int    `json:"id" db:"id"`
-	ClientID    []byte `json:"clientId" db:"client_id"`
-	RedirectURL string `json:"redirectUrl" db:"redirect_url"`
-}
-
 type ClientGrantTypes struct {
 	ClientID  []byte          `json:"clientId" db:"client_id"`
 	GrantType ClientGrantType `json:"grantType" db:"grant_type"`
