@@ -9,8 +9,9 @@ import (
 )
 
 type Handlers struct {
-	AuthHandler *AuthHandler
-	PubKey *rsa.PublicKey
+	AuthHandler   *AuthHandler
+	ClientHandler *ClientHandler
+	PubKey        *rsa.PublicKey
 }
 
 func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
@@ -24,12 +25,22 @@ func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
 		auth.GET("/session", h.AuthHandler.CheckSession)
 	}
 
-	// Protected Admin Endpoints (Using the pre-loaded pubKey)
+	// Protected Admin Endpoints
 	admin := v1Group.Group("/admin")
 	admin.Use(middleware.AuthorizeRBAC(h.PubKey, "idp:admin"))
 	{
 		admin.GET("/status", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"status": "IdP is operational"})
 		})
+
+		// Service Provider (Client) Maintenance
+		clients := admin.Group("/clients")
+		{
+			clients.POST("", h.ClientHandler.Create)
+			clients.GET("", h.ClientHandler.List)
+			clients.GET("/:id", h.ClientHandler.GetByID)
+			clients.PUT("/:id", h.ClientHandler.Update)
+			clients.DELETE("/:id", h.ClientHandler.Delete)
+		}
 	}
 }
