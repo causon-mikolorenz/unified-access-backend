@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/rsa"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -15,11 +15,11 @@ import (
 	v1 "github.com/causon-mikolorenz/unified-access-backend/internal/api/v1"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/auth"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/database"
+	"github.com/causon-mikolorenz/unified-access-backend/internal/initializers"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/middleware"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/repository"
 	"github.com/causon-mikolorenz/unified-access-backend/models"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
@@ -29,7 +29,7 @@ func main() {
 	godotenv.Load()
 
 	// 2. Load RSA Keys (Private for signing, Public for middleware)
-	privKey, pubKey := loadRSAKeys()
+	initializers.LoadRSAKeys()
 
 	// 3. Database Migration Flag logic
 	doMigrate := flag.Bool("migrate", false, "Run database migration first")
@@ -52,31 +52,47 @@ func main() {
 		userRepo := repository.NewUserRepository(adminDatabase)
 
 		// 4. Prepare Admin Data
-		newID := uuid.New()                                             // Generates binary UUID
-		hashedPassword, _ := auth.HashSecret(os.Getenv("APP_PASSWORD")) // Uses your Bcrypt utility
+		adminDatabase.Exec("DELETE FROM users WHERE email = 'example@example.com'")
+
+		newAdminID := uuid.New()
+		rawPassword := "admin123"
+		hashedPassword, _ := auth.HashSecret(rawPassword)
 
 		adminUser := &models.User{
-			ID:           newID[:], // Convert UUID to []byte
+			ID:           newAdminID[:],
 			Username:     "Admin",
-			FirstName:    "idp",
-			MiddleName:   "super",
-			LastName:     "admin",
 			Email:        "example@example.com",
 			PasswordHash: hashedPassword,
 			Roles:        []string{"idp:admin"},
 		}
 
-		// 5. Execute CreateUser Stored Procedure
-		err = userRepo.CreateUser(adminUser)
-		if err != nil {
-			// We log but don't fail if the user already exists (idempotency)
-			log.Printf("Note: Admin user seeding skipped or failed: %v", err)
+		if err := userRepo.CreateUser(adminUser); err != nil {
+			log.Printf("❌ Seeding Failed: %v", err)
 		} else {
-			fmt.Println("Super Admin created successfully.")
+			fmt.Println("✅ Admin re-seeded with password: admin123")
 		}
 
-		fmt.Println("Database setup complete.")
-		return
+		testClientID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+		hashedSecret, _ := auth.HashSecret("test-secret-123")
+
+		redirectsJSON, _ := json.Marshal([]string{"http://localhost:5173/callback"})
+		grantsJSON, _ := json.Marshal([]string{"authorization_code", "refresh_token"})
+
+		// Call the procedure
+		_, err = adminDatabase.Exec(
+			"CALL RegisterClient(?, ?, ?, ?, ?)",
+			testClientID[:],
+			"React Dev Client",
+			hashedSecret,
+			redirectsJSON,
+			grantsJSON,
+		)
+
+		if err != nil {
+			log.Printf("Note: Client seeding skipped or failed: %v", err)
+		} else {
+			fmt.Println("✅ Test Client 'React Dev Client' registered via procedure.")
+		}
 	}
 
 	// 4. Connect to App Database
@@ -87,10 +103,10 @@ func main() {
 	defer appDB.Close()
 
 	// 5. Initialize Layers
-	authRepo := repository.NewAuthCodeRepository(appDB)
-	authHandler := &v1.AuthHandler{
-		Repo:       authRepo,
-		PrivateKey: privKey,
+	handlerContainer := initializers.InitializeHandlers(appDB)
+	handlers := v1.Handlers{
+		AuthHandler: handlerContainer.AuthHandler,
+		PubKey:      initializers.PubKey,
 	}
 
 	// 6. Setup Signal Context for Graceful Shutdown
@@ -101,29 +117,20 @@ func main() {
 	// Start Background Janitor
 	database.StartJanitor(ctx, appDB, 10*time.Minute)
 
-	// 7. Initialize Gin Router & Routes
+	// 7. Initialize Gin Router
 	r := gin.Default()
 
+	// 8. Setup CORS
+	r.Use(middleware.CORSMiddleware())
+
+	// 9. Serve static images
+	r.Static("/public", "./public")
+
+	// 10. Handle Routes
 	v1Group := r.Group("/api/v1")
-	{
-		// Public Auth Endpoints
-		auth := v1Group.Group("/auth")
-		{
-			auth.POST("/login", authHandler.LoginAndAuthorize)
-			auth.POST("/token", authHandler.ExchangeToken)
-		}
+	v1.MapRoutes(v1Group, handlers)
 
-		// Protected Admin Endpoints (Using the pre-loaded pubKey)
-		admin := v1Group.Group("/admin")
-		admin.Use(middleware.AuthorizeRBAC(pubKey, "idp:admin"))
-		{
-			admin.GET("/status", func(c *gin.Context) {
-				c.JSON(http.StatusOK, gin.H{"status": "IdP is operational"})
-			})
-		}
-	}
-
-	// 8. Configure & Start HTTP Server
+	// 11. Configure & Start HTTP Server
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r, // Gin is the handler here
@@ -137,7 +144,7 @@ func main() {
 
 	fmt.Println("Backend is running on :8080!")
 
-	// 9. Graceful Shutdown Sequence
+	// 12. Graceful Shutdown Sequence
 	<-ctx.Done() // Wait for SIGINT/SIGTERM
 
 	stop()
@@ -151,26 +158,4 @@ func main() {
 	}
 
 	log.Println("Server exiting")
-}
-
-func loadRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey) {
-	privBytes, err := os.ReadFile("certs/private.pem")
-	if err != nil {
-		log.Fatal("Could not read private key: ", err)
-	}
-	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(privBytes)
-	if err != nil {
-		log.Fatal("Could not parse private key: ", err)
-	}
-
-	pubBytes, err := os.ReadFile("certs/public.pem")
-	if err != nil {
-		log.Fatal("Could not read public key: ", err)
-	}
-	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(pubBytes)
-	if err != nil {
-		log.Fatal("Could not parse public key: ", err)
-	}
-
-	return privKey, pubKey
 }
