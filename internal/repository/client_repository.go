@@ -40,21 +40,6 @@ func (r *ClientRepository) Authenticate(id []byte,
 	return &client, err
 }
 
-func (r *ClientRepository) GetRedirectUrls(client *models.Client) ([]models.ClientUrl, error) {
-	var urls []models.ClientUrl
-	query := `
-		SELECT id, client_id, redirect_url
-		FROM client_urls WHERE client_id = ?
-	`
-
-	err := r.db.Select(&urls, query, client.ID)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get client urls: %w", err)
-	}
-
-	return urls, err
-}
-
 func (r *ClientRepository) GetGrantTypes(client *models.Client) ([]models.ClientGrantTypes, error) {
 	var grantTypes []models.ClientGrantTypes
 	query := `
