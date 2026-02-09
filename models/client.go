@@ -19,10 +19,16 @@ func (g ClientGrantType) IsValid() bool {
 }
 
 type Client struct {
-	ID           []byte    `json:"id" db:"id"`
-	ClientName   string    `json:"clientName" db:"client_name"`
-	ClientSecret string    `json:"-" db:"client_secret"`
-	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+	ID            []byte    `db:"id"`
+	ClientName    string    `db:"client_name"`
+	Abbreviation  string    `db:"abbreviation"`
+	ClientSecret  string    `db:"client_secret"`
+	BaseUrl       string    `db:"base_url"`
+	RedirectUri   string    `db:"redirect_url"`
+	LogoutUri     string    `db:"logout_url"`
+	Description   string    `db:"description"`
+	ImageLocation string    `db:"image_location"`
+	UpdatedAt     time.Time `db:"updated_at"`
 }
 
 type ClientGrantTypes struct {
