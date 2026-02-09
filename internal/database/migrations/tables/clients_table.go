@@ -17,5 +17,23 @@ var ClientsMigration = migrations.TableMigration{
 				deleted_at TIMESTAMP NULL
 			);`,
 		},
+		{
+			ID: "add-url-columns",
+			SQL: `
+				ALTER TABLE clients
+				ADD COLUMN base_url VARCHAR(255) NOT NULL,
+				ADD COLUMN redirect_uri VARCHAR(255) NOT NULL,
+				ADD COLUMN logout_uri VARCHAR(255) NOT NULL;
+			`,
+		},
+		{
+			ID: "add-other-identifier-columns",
+			SQL: `
+				ALTER TABLE clients
+				ADD COLUMN abbreviation VARCHAR(10) UNIQUE NOT NULL,
+				ADD COLUMN description TEXT,
+				ADD COLUMN image_location VARCHAR(255);
+			`,
+		},
 	},
 }
