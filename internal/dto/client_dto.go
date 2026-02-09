@@ -26,5 +26,8 @@ type ClientResponse struct {
 	Abbreviation  string `json:"abbreviation"`
 	Description   string `json:"description"`
 	ImageLocation string `json:"image_location"`
+	BaseURL       string `json:"base_url"`
+	RedirectURI   string `json:"redirect_uri"`
+	LogoutURI     string `json:"logout_uri"`
 	CreatedAt     string `json:"created_at"`
 }
