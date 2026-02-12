@@ -11,6 +11,7 @@ import (
 type Handlers struct {
 	AuthHandler   *AuthHandler
 	ClientHandler *ClientHandler
+	RoleHandler   *RoleHandler
 	PubKey        *rsa.PublicKey
 }
 
@@ -41,6 +42,16 @@ func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
 			clients.GET("/:id", h.ClientHandler.GetByID)
 			clients.PUT("/:id", h.ClientHandler.Update)
 			clients.DELETE("/:id", h.ClientHandler.Delete)
+		}
+
+		// Role Maintenance
+		roles := admin.Group("/roles")
+		{
+			roles.POST("", h.RoleHandler.PostRole)
+			roles.GET("", h.RoleHandler.GetRoleList)
+			roles.GET("/:id", h.RoleHandler.GetRole)
+			roles.PUT("/:id", h.RoleHandler.PutRole)
+			roles.DELETE("/:id", h.RoleHandler.DeleteRole)
 		}
 	}
 }
