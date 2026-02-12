@@ -24,21 +24,23 @@ func (s UserStatus) IsRestricted() bool {
 }
 
 type User struct {
-	ID           []byte     `json:"id" db:"id"`
-	Username     string     `json:"userName" db:"username"`
-	FirstName    string     `json:"firstName" db:"first_name"`
-	MiddleName   string     `json:"middleName" db:"middle_name"`
-	LastName     string     `json:"lastName" db:"last_name"`
-	Email        string     `json:"email" db:"email"`
-	PasswordHash string     `json:"-" db:"password_hash"`
-	Status       UserStatus `json:"status" db:"status"`
-	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`
+	ID           []byte     `db:"id"`
+	Username     string     `db:"username"`
+	FirstName    string     `db:"first_name"`
+	MiddleName   string     `db:"middle_name"`
+	LastName     string     `db:"last_name"`
+	Email        string     `db:"email"`
+	PasswordHash string     `db:"password_hash"`
+	Status       UserStatus `db:"status"`
+	UpdatedAt    time.Time  `db:"updated_at"`
 
-	Roles []string `json:"roles" db:"-"`
+	Roles []string `db:"-"`
 }
 
 type Role struct {
-	ID          int    `json:"id" db:"id"`
-	RoleName    string `json:"roleName" db:"role_name"`
-	Description string `json:"description" db:"description"`
+	ID          int       `db:"id"`
+	RoleName    string    `db:"role_name"`
+	Description string    `db:"description"`
+	CreatedAt   time.Time `db:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"`
 }
