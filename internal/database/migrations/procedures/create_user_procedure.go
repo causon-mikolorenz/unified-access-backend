@@ -57,7 +57,7 @@ var CreateUserProcedure = migrations.MigrationPart{
                 VALUES (
                     p_userId, 
                     'USER_CREATION', 
-                    CONCAT('Account ', p_username, ' created via system seeder.')
+                    CONCAT('Account ', p_username, ' created.')
                 );
 
                 COMMIT;
