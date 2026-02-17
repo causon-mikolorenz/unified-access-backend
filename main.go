@@ -11,13 +11,26 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/causon-mikolorenz/unified-access-backend/docs"
 	v1 "github.com/causon-mikolorenz/unified-access-backend/internal/api/v1"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/database"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/initializers"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title Unified Access Identity Provider API
+// @version 1.0
+// @description Identity Provider for the Unified School System Capstone.
+// @termsOfService http://swagger.io/terms/
+// @contact.name Miko Lorenz Causon
+// @contact.email causonmikolorenz@gmail.com
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+// @host localhost:8080
+// @BasePath /api/v1
 func main() {
 	godotenv.Load()
 	initializers.LoadRSAKeys()
@@ -31,7 +44,7 @@ func main() {
 
 	appDB, err := database.ConnectToDB()
 	if err != nil {
-		log.Fatalf("[Main] App database connection failed: %v", err)
+		log.Fatalf("[Main] App Database Connection Failed: %v", err)
 	}
 	defer appDB.Close()
 
@@ -50,6 +63,9 @@ func main() {
 	r.Use(h.CORS)
 	r.Static("/public", "./public")
 
+	// Register Swagger UI route
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	v1Group := r.Group("/api/v1")
 	v1.MapRoutes(v1Group, *h)
 
@@ -60,7 +76,7 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("[Main] What failed: server listen %v", err)
+			log.Fatalf("[Main] Server Listen Error: %v", err)
 		}
 	}()
 
@@ -75,7 +91,7 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("[Main] Forced shutdown: %v", err)
+		log.Fatalf("[Main] Forced Shutdown Error: %v", err)
 	}
 
 	log.Println("Server exited")
