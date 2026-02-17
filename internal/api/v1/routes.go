@@ -39,11 +39,11 @@ func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
 		// Service Provider (Client) Maintenance
 		clients := admin.Group("/clients")
 		{
-			clients.POST("", h.ClientHandler.Create)
-			clients.GET("", h.ClientHandler.List)
-			clients.GET("/:id", h.ClientHandler.GetByID)
-			clients.PUT("/:id", h.ClientHandler.Update)
-			clients.DELETE("/:id", h.ClientHandler.Delete)
+			clients.POST("", h.ClientHandler.PostClient)
+			clients.GET("", h.ClientHandler.GetClientList)
+			clients.GET("/:id", h.ClientHandler.GetClient)
+			clients.PUT("/:id", h.ClientHandler.PutClient)
+			clients.DELETE("/:id", h.ClientHandler.DeleteClient)
 		}
 
 		// Role Maintenance
