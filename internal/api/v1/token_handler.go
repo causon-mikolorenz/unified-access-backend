@@ -11,111 +11,128 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *AuthHandler) ExchangeToken(c *gin.Context) {
+// PostTokenExchange handles the exchange of an auth code for access tokens
+// @Summary Exchange Auth Code
+// @Description Validates the code and client secret to issue JWT and Refresh
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param req body dto.TokenExchangeRequest true "Exchange Request"
+// @Success 200 {object} dto.TokenResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/auth/token [post]
+func (h *AuthHandler) PostTokenExchange(c *gin.Context) {
 	var req dto.TokenExchangeRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[ExchangeToken] Bind JSON Error: %v", err)
+		log.Printf("[PostTokenExchange] Bind JSON Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
 		return
 	}
 
 	clientUUID, err := uuid.Parse(req.ClientID)
 	if err != nil {
+		log.Printf("[PostTokenExchange] Client ID Parse Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_client"})
 		return
 	}
 	clientIDBin := clientUUID[:]
 
-	validClient, err := h.Repo.VerifyClient(clientIDBin, req.ClientSecret)
-	if err != nil || !validClient {
-		log.Printf("[ExchangeToken] Client Verification Failed: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized_client"})
+	valid, err := h.Repo.VerifyClient(clientIDBin, req.ClientSecret)
+	if err != nil || !valid {
+		log.Printf("[PostTokenExchange] Client Verification Failed: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	// 4. Consume the Code
 	authCode, err := h.Repo.ExchangeCode(req.Code)
 	if err != nil {
-		// THIS LOG WILL SHOW IF IT'S EXPIRED OR ALREADY USED
-		log.Printf("[ExchangeToken] ExchangeCode Error for code [%s]: %v", req.Code, err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_grant",
-			"message": err.Error(),
-		})
+		log.Printf("[PostTokenExchange] Code Exchange Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant"})
 		return
 	}
 
 	if !bytes.Equal(authCode.ClientId, clientIDBin) {
-		log.Printf("[ExchangeToken] Client ID Mismatch: Code owned by %x, requested by %x", authCode.ClientId, clientIDBin)
-		c.JSON(http.StatusForbidden, gin.H{"error": "invalid_grant", "message": "client mismatch"})
+		log.Printf("[PostTokenExchange] Client ID Mismatch Error")
+		c.JSON(http.StatusForbidden, gin.H{"error": "invalid_grant"})
 		return
 	}
 
 	claims, err := h.Repo.GetClaimsByID(authCode.UserId)
 	if err != nil {
-		log.Printf("[ExchangeToken] GetClaimsByID Error: %v", err)
+		log.Printf("[PostTokenExchange] Claims Retrieval Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
 
 	accessToken, err := auth.GenerateToken(h.PrivateKey, clientIDBin, *claims)
-
-	refreshTokenStr, err := auth.GenerateRandomString(64)
-	err = h.Repo.StoreRefreshToken(refreshTokenStr, claims.UserID, clientIDBin)
+	refreshStr, err := auth.GenerateRandomString(64)
+	_ = h.Repo.StoreRefreshToken(refreshStr, claims.UserID, clientIDBin)
 
 	c.JSON(http.StatusOK, dto.TokenResponse{
 		AccessToken:  accessToken,
-		RefreshToken: refreshTokenStr,
+		RefreshToken: refreshStr,
 		ExpiresIn:    3600,
 		TokenType:    "Bearer",
 	})
 }
 
-func (h *AuthHandler) RotateToken(c *gin.Context) {
+// PostTokenRotate handles refreshing an access token using a refresh token
+// @Summary Rotate Refresh Token
+// @Description Invalidates old refresh token and issues a new pair
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param req body dto.RefreshRequest true "Refresh Request"
+// @Success 200 {object} dto.TokenResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/auth/refresh [post]
+func (h *AuthHandler) PostTokenRotate(c *gin.Context) {
 	var req dto.RefreshRequest
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[RotateToken] Bind JSON Error: %v", err)
+		log.Printf("[PostTokenRotate] Bind JSON Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
 		return
 	}
 
-	userID, clientID, err := h.Repo.GetIDsFromToken(req.RefreshToken)
+	uID, cID, err := h.Repo.GetIDsFromToken(req.RefreshToken)
 	if err != nil {
-		log.Printf("[RotateToken] Error getting user from token: %w", err)
-		c.JSON(http.StatusInternalServerError, 
-				gin.H{"error": "user_lookup_failed"},
-		)
+		log.Printf("[PostTokenRotate] Token Lookup Error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid_token"})
+		return
 	}
 
 	newToken, err := auth.GenerateRandomString(64)
 	if err != nil {
-		log.Printf("[RotateToken] Error generating refresh token: %w", err)
+		log.Printf("[PostTokenRotate] Token Generation Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "token_error"})
 		return
 	}
 
-	err = h.Repo.RotateRefreshToken(req.RefreshToken, newToken)
-	if err != nil {
-		log.Printf("[RotateToken] Error rotating token: %w", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "rotation_error"})
+	if err := h.Repo.RotateRefreshToken(req.RefreshToken, newToken); err != nil {
+		log.Printf("[PostTokenRotate] Token Rotation Error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "rotate_fail"})
 		return
 	}
 
-	claims, err := h.Repo.GetClaimsByID(userID)
+	claims, err := h.Repo.GetClaimsByID(uID)
 	if err != nil {
-		log.Printf("[ExchangeToken] GetClaimsByID Error: %v", err)
+		log.Printf("[PostTokenRotate] Claims Retrieval Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
 
-	accessToken, err := auth.GenerateToken(h.PrivateKey, clientID, *claims)
+	accessToken, _ := auth.GenerateToken(h.PrivateKey, cID, *claims)
 
 	c.JSON(http.StatusOK, dto.TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: newToken,
 		ExpiresIn:    3600,
 		TokenType:    "Bearer",
-	})	
+	})
 }
