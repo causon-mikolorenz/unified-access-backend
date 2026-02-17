@@ -37,34 +37,35 @@ func (h *AuthHandler) LoginAndAuthorize(c *gin.Context) {
 	var req dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[LoginAndAuthorize] What failed: %v", err)
+		log.Printf("[LoginAndAuthorize] Bind JSON Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
 	}
 
 	claims, storedHash, err := h.Repo.GetUserForAuth(req.Email)
 	if err != nil {
-		log.Printf("[LoginAndAuthorize] What failed: email %s not found", req.Email)
+		log.Printf("[LoginAndAuthorize] User Lookup Error: %s", req.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
 	if err := auth.CompareSecret(storedHash, req.Password); err != nil {
-		log.Printf("[LoginAndAuthorize] What failed: invalid pass for %s", req.Email)
+		log.Printf("[LoginAndAuthorize] Password Verification Failed: %s", 
+			req.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
 	code, err := auth.GenerateAuthorizationCode()
 	if err != nil {
-		log.Printf("[LoginAndAuthorize] What failed: code generation %v", err)
+		log.Printf("[LoginAndAuthorize] Code Generation Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
 
 	clientUUID, err := uuid.Parse(req.ClientID)
 	if err != nil {
-		log.Printf("[LoginAndAuthorize] What failed: client_id parse %v", err)
+		log.Printf("[LoginAndAuthorize] Client ID Parse Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid client_id"})
 		return
 	}
@@ -74,20 +75,23 @@ func (h *AuthHandler) LoginAndAuthorize(c *gin.Context) {
 
 	registeredURI, err := h.Repo.GetClientRedirectURI(clientIDBytes[:])
 	if err != nil {
-		log.Printf("[LoginAndAuthorize] What failed: client lookup %v", err)
+		log.Printf("[LoginAndAuthorize] Client Registry Lookup Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_client"})
 		return
 	}
 
 	if req.RedirectURI != registeredURI {
-		log.Printf("[LoginAndAuthorize] What failed: uri mismatch %s", req.Email)
-		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized_redirect_uri"})
+		log.Printf("[LoginAndAuthorize] Redirect URI Mismatch Error: %s", 
+			req.Email)
+		c.JSON(http.StatusForbidden, 
+			gin.H{"error": "unauthorized_redirect_uri"})
 		return
 	}
 
-	err = h.Repo.StoreCode(code, claims.UserID, clientIDBytes[:], req.RedirectURI)
+	err = h.Repo.StoreCode(code, claims.UserID, clientIDBytes[:], 
+		req.RedirectURI)
 	if err != nil {
-		log.Printf("[LoginAndAuthorize] What failed: store code %v", err)
+		log.Printf("[LoginAndAuthorize] Database Store Code Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}
@@ -104,7 +108,7 @@ func (h *AuthHandler) LoginAndAuthorize(c *gin.Context) {
 	}
 
 	if err := h.SessionRepo.Create(newSession); err != nil {
-		log.Printf("[LoginAndAuthorize] What failed: session create %v", err)
+		log.Printf("[LoginAndAuthorize] Database Session Create Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "session error"})
 		return
 	}
@@ -140,7 +144,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	if err := h.Repo.RevokeTokens(session.UserId); err != nil {
-		log.Printf("[Logout] What failed: revocation %v", err)
+		log.Printf("[Logout] Token Revocation Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "logout failed"})
 		return
 	}
