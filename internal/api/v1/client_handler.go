@@ -55,7 +55,7 @@ func (h *ClientHandler) PostClient(c *gin.Context) {
 		imagePath = "public/icons/" + abbr + "-" + file.Filename
 
 		if err := c.SaveUploadedFile(file, imagePath); err != nil {
-			log.Printf("[PostClient] What failed: image save %v", err)
+			log.Printf("[PostClient] Failed to save image %v", err)
 			c.JSON(http.StatusInternalServerError,
 				gin.H{"error": "failed to save image"})
 			return
@@ -83,7 +83,7 @@ func (h *ClientHandler) PostClient(c *gin.Context) {
 
 	grants := c.PostFormArray("grants")
 	if err = h.Repo.CreateClient(clientModel, grants); err != nil {
-		log.Printf("[PostClient] What failed: %v", err)
+		log.Printf("[PostClient] Creation failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
 		return
 	}
@@ -110,7 +110,7 @@ func (h *ClientHandler) GetClientList(c *gin.Context) {
 
 	clients, err := h.Repo.ListClients(limit, offset)
 	if err != nil {
-		log.Printf("[GetClientList] What failed: %v", err)
+		log.Printf("[GetClientList] Fetching list failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "fetch error"})
 		return
 	}
@@ -140,14 +140,14 @@ func (h *ClientHandler) GetClient(c *gin.Context) {
 	idParam := c.Param("id")
 	clientUUID, err := uuid.Parse(idParam)
 	if err != nil {
-		log.Printf("[GetClient] What failed: invalid uuid %v", err)
+		log.Printf("[GetClient] Invalid uuid %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid format"})
 		return
 	}
 
 	cl, err := h.Repo.GetByID(clientUUID[:])
 	if err != nil {
-		log.Printf("[GetClient] What failed: client not found %v", err)
+		log.Printf("[GetClient] Client not found %v", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "client not found"})
 		return
 	}
@@ -188,7 +188,7 @@ func (h *ClientHandler) PutClient(c *gin.Context) {
 
 	var req dto.UpdateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[PutClient] What failed: %v", err)
+		log.Printf("[PutClient] Binding failed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
@@ -204,7 +204,7 @@ func (h *ClientHandler) PutClient(c *gin.Context) {
 	}
 
 	if err := h.Repo.UpdateClient(client); err != nil {
-		log.Printf("[PutClient] What failed: %v", err)
+		log.Printf("[PutClient] Update failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "update fail"})
 		return
 	}
@@ -220,13 +220,13 @@ func (h *ClientHandler) DeleteClient(c *gin.Context) {
 	idParam := c.Param("id")
 	clientUUID, err := uuid.Parse(idParam)
 	if err != nil {
-		log.Printf("[DeleteClient] What failed: invalid uuid %v", err)
+		log.Printf("[DeleteClient] Invalid uuid %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
 		return
 	}
 
 	if err := h.Repo.SoftDelete(clientUUID[:]); err != nil {
-		log.Printf("[DeleteClient] What failed: %v", err)
+		log.Printf("[DeleteClient] Deletion failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "delete fail"})
 		return
 	}
