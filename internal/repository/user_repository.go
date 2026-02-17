@@ -12,47 +12,57 @@ type UserRepository struct {
 	db *sqlx.DB
 }
 
+// GetUserList retrieves a paginated list of non-deleted users.
+func (r *UserRepository) GetUserList(limit, offset int) ([]models.User, error) {
+	var users []models.User
+	query := `
+		SELECT id, username, first_name, middle_name, last_name,
+		       email, status, created_at, updated_at
+		FROM users
+		WHERE deleted_at IS NULL 
+		LIMIT ? OFFSET ?`
+
+	err := r.db.Select(&users, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+	return users, nil
+}
+
+// GetUserByEmail finds a user by email, including the hash for auth logic.
 func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	query := `
-		SELECT 
-			id, 
-			username, 
-			first_name, 
-			middle_name, 
-			last_name, 
-			email,
-			password_hash, 
-			status
+		SELECT id, username, first_name, middle_name, last_name, 
+		       email, password_hash, status, created_at, updated_at
 		FROM users
-		WHERE email = ?
-	`
-	err := r.db.Get(&user, query, email)
+		WHERE email = ? AND deleted_at IS NULL`
 
-	return &user, err
+	err := r.db.Get(&user, query, email)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
+// GetUserById retrieves a specific user by binary UUID.
 func (r *UserRepository) GetUserById(id []byte) (*models.User, error) {
 	var user models.User
 	query := `
-		SELECT 
-			id, 
-			username, 
-			first_name, 
-			middle_name, 
-			last_name, 
-			email, 
-			status
+		SELECT id, username, first_name, middle_name, last_name, 
+		       email, status, created_at, updated_at
 		FROM users
-		WHERE id = ?
-	`
-	err := r.db.Get(&user, query, id)
+		WHERE id = ? AND deleted_at IS NULL`
 
-	return &user, err
+	err := r.db.Get(&user, query, id)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
+// CreateUser executes a stored procedure to handle User and Roles atomically.
 func (r *UserRepository) CreateUser(u *models.User) error {
-	// 1. Convert the roles slice into a JSON string
 	rolesJSON, err := json.Marshal(u.Roles)
 	if err != nil {
 		return fmt.Errorf("failed to marshal user roles: %w", err)
@@ -60,7 +70,6 @@ func (r *UserRepository) CreateUser(u *models.User) error {
 
 	query := `CALL CreateUser(?, ?, ?, ?, ?, ?, ?, ?)`
 
-	// 2. Pass rolesJSON as the 8th argument
 	_, err = r.db.Exec(query,
 		u.ID,
 		u.Username,
@@ -72,42 +81,52 @@ func (r *UserRepository) CreateUser(u *models.User) error {
 		rolesJSON,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to execute procedure: %w", err)
+		return fmt.Errorf("failed to execute CreateUser procedure: %w", err)
 	}
-
 	return nil
 }
 
-func (r *UserRepository) UpdateStatus(user *models.User, status models.UserStatus) error {
-	query := `UPDATE users SET status = ? WHERE id = ?`
+// UpdateStatus changes the user's active/inactive state.
+func (r *UserRepository) UpdateStatus(id []byte, status string) error {
+	query := `UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?`
 
-	_, err := r.db.Exec(query, status, user.ID)
+	_, err := r.db.Exec(query, status, id)
 	if err != nil {
-		return fmt.Errorf("Failed to update status: %w", err)
+		return fmt.Errorf("failed to update user status: %w", err)
 	}
-
-	return err
+	return nil
 }
 
-func (r *UserRepository) GetRoles(user *models.User) ([]models.Role, error) {
+// GetRoles fetches the roles assigned to a user via the junction table.
+func (r *UserRepository) GetRoles(userID []byte) ([]models.Role, error) {
 	var roles []models.Role
 	query := `
 		SELECT r.id, r.role_name, r.description 
 		FROM roles r
 		JOIN user_roles ur ON r.id = ur.role_id
-		WHERE ur.user_id = ?
-	`
+		WHERE ur.user_id = ? AND r.deleted_at IS NULL`
 
-	err := r.db.Select(&roles, query, user.ID)
+	err := r.db.Select(&roles, query, userID)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get user roles: %w", err)
+		return nil, fmt.Errorf("failed to get user roles: %w", err)
 	}
-
 	return roles, nil
 }
 
+// SoftDelete marks the user as deleted for forensic record keeping.
+func (r *UserRepository) SoftDelete(id []byte) error {
+	query := `CALL ArchiveUser(?)`
+	_, err := r.db.Exec(query, id)
+	return err
+}
+
+func (r *UserRepository) CountUsers() (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`
+	err := r.db.Get(&count, query)
+	return count, err
+}
+
 func NewUserRepository(db *sqlx.DB) *UserRepository {
-	return &UserRepository{
-		db: db,
-	}
+	return &UserRepository{db: db}
 }
