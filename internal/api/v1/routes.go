@@ -14,6 +14,7 @@ type Handlers struct {
 	RoleHandler   *RoleHandler
 	UserHandler   *UserHandler
 	PubKey        *rsa.PublicKey
+	CORS          gin.HandlerFunc
 }
 
 func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {

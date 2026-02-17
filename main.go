@@ -16,7 +16,6 @@ import (
 	"github.com/causon-mikolorenz/unified-access-backend/internal/auth"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/database"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/initializers"
-	"github.com/causon-mikolorenz/unified-access-backend/internal/middleware"
 	"github.com/causon-mikolorenz/unified-access-backend/internal/repository"
 	"github.com/causon-mikolorenz/unified-access-backend/models"
 	"github.com/gin-gonic/gin"
@@ -104,10 +103,6 @@ func main() {
 
 	// 5. Initialize Layers
 	handlerContainer := initializers.InitializeHandlers(appDB)
-	handlers := v1.Handlers{
-		AuthHandler: handlerContainer.AuthHandler,
-		PubKey:      initializers.PubKey,
-	}
 
 	// 6. Setup Signal Context for Graceful Shutdown
 	// This context will cancel when you press Ctrl+C or when Docker stops the container
@@ -121,14 +116,14 @@ func main() {
 	r := gin.Default()
 
 	// 8. Setup CORS
-	r.Use(middleware.CORSMiddleware())
+	r.Use(*&handlerContainer.CORS)
 
 	// 9. Serve static images
 	r.Static("/public", "./public")
 
 	// 10. Handle Routes
 	v1Group := r.Group("/api/v1")
-	v1.MapRoutes(v1Group, handlers)
+	v1.MapRoutes(v1Group, *handlerContainer)
 
 	// 11. Configure & Start HTTP Server
 	srv := &http.Server{
