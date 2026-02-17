@@ -32,7 +32,7 @@ type UserHandler struct {
 func (h *UserHandler) PostUser(c *gin.Context) {
 	var req dto.UserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[PostUser] What failed: %v", err)
+		log.Printf("[PostUser] Bind JSON Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -54,7 +54,7 @@ func (h *UserHandler) PostUser(c *gin.Context) {
 
 	err := h.Repo.CreateUser(&user)
 	if err != nil {
-		log.Printf("[PostUser] What failed: %v", err)
+		log.Printf("[PostUser] Database Create Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}
@@ -77,14 +77,14 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	id := c.Param("id")
 	userID, err := uuid.Parse(id)
 	if err != nil {
-		log.Printf("[GetUser] What failed: invalid ID format %v", err)
+		log.Printf("[GetUser] UUID Parse Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID Format"})
 		return
 	}
 
 	user, err := h.Repo.GetUserById(userID[:])
 	if err != nil {
-		log.Printf("[GetUser] What failed: user not found %v", err)
+		log.Printf("[GetUser] Database Query Error: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -119,7 +119,7 @@ func (h *UserHandler) GetUserList(c *gin.Context) {
 	offset := (page - 1) * PAGE_LIMIT
 	users, err := h.Repo.GetUserList(PAGE_LIMIT, offset)
 	if err != nil {
-		log.Printf("[GetUserList] What failed: %v", err)
+		log.Printf("[GetUserList] Fetch List Error: %v", err)
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "Failed to fetch user list"})
 		return
@@ -127,7 +127,7 @@ func (h *UserHandler) GetUserList(c *gin.Context) {
 
 	total, err := h.Repo.CountUsers()
 	if err != nil {
-		log.Printf("[GetUserList] What failed: %v", err)
+		log.Printf("[GetUserList] Database Count Error: %v", err)
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "Failed to fetch user count"})
 		return
@@ -174,13 +174,13 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 	userID, err := uuid.Parse(id)
 	if err != nil {
-		log.Printf("[DeleteUser] What failed: invalid ID %v", err)
+		log.Printf("[DeleteUser] UUID Parse Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 
 	if err := h.Repo.SoftDelete(userID[:]); err != nil {
-		log.Printf("[DeleteUser] What failed: %v", err)
+		log.Printf("[DeleteUser] Database SoftDelete Error: %v", err)
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "Deletion Failed"})
 		return

@@ -3,4 +3,7 @@ package v1
 const (
 	PAGE_LIMIT = 10
 	TIME_LAYOUT     = "2006-01-02 15:04:05"
+	SESSION_YEARS  = 0
+	SESSION_MONTHS = 0
+	SESSION_DAYS   = 15
 )

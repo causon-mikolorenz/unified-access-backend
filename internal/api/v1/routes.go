@@ -21,10 +21,9 @@ func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
 	auth := v1Group.Group("/auth")
 	{
 		auth.POST("/login", h.AuthHandler.LoginAndAuthorize)
-		auth.POST("/token", h.AuthHandler.ExchangeToken)
-		auth.POST("/refresh", h.AuthHandler.RotateToken)
+		auth.POST("/token", h.AuthHandler.PostTokenExchange)
+		auth.POST("/refresh", h.AuthHandler.PostTokenRotate)
 		auth.POST("/logout", h.AuthHandler.Logout)
-
 		auth.GET("/session", h.AuthHandler.CheckSession)
 	}
 
@@ -39,11 +38,11 @@ func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
 		// Service Provider (Client) Maintenance
 		clients := admin.Group("/clients")
 		{
-			clients.POST("", h.ClientHandler.Create)
-			clients.GET("", h.ClientHandler.List)
-			clients.GET("/:id", h.ClientHandler.GetByID)
-			clients.PUT("/:id", h.ClientHandler.Update)
-			clients.DELETE("/:id", h.ClientHandler.Delete)
+			clients.POST("", h.ClientHandler.PostClient)
+			clients.GET("", h.ClientHandler.GetClientList)
+			clients.GET("/:id", h.ClientHandler.GetClient)
+			clients.PUT("/:id", h.ClientHandler.PutClient)
+			clients.DELETE("/:id", h.ClientHandler.DeleteClient)
 		}
 
 		// Role Maintenance
