@@ -21,10 +21,9 @@ func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
 	auth := v1Group.Group("/auth")
 	{
 		auth.POST("/login", h.AuthHandler.LoginAndAuthorize)
-		auth.POST("/token", h.AuthHandler.ExchangeToken)
-		auth.POST("/refresh", h.AuthHandler.RotateToken)
+		auth.POST("/token", h.AuthHandler.PostTokenExchange)
+		auth.POST("/refresh", h.AuthHandler.PostTokenRotate)
 		auth.POST("/logout", h.AuthHandler.Logout)
-
 		auth.GET("/session", h.AuthHandler.CheckSession)
 	}
 
