@@ -15,11 +15,6 @@ type RoleHandler struct {
 	Repo *repository.RoleRepository
 }
 
-const (
-	ROLE_PAGE_LIMIT = 10
-	TIME_LAYOUT     = "2006-01-02 15:04:05"
-)
-
 // PostRole handles POST /v1/admin/roles
 // @Summary Create a new role
 // @Description Adds a new global or SP-prefixed role to the system
@@ -68,9 +63,9 @@ func (h *RoleHandler) GetRoleList(c *gin.Context) {
 	if page < 1 {
 		page = 1
 	}
-	offset := (page - 1) * ROLE_PAGE_LIMIT
+	offset := (page - 1) * PAGE_LIMIT
 
-	roles, err := h.Repo.ListRoles(ROLE_PAGE_LIMIT, offset)
+	roles, err := h.Repo.ListRoles(PAGE_LIMIT, offset)
 	if err != nil {
 		log.Printf("[GetRoleList] Fetch failed: %v", err)
 		c.JSON(http.StatusInternalServerError,
@@ -86,7 +81,7 @@ func (h *RoleHandler) GetRoleList(c *gin.Context) {
 		return
 	}
 
-	lastPage := (total + ROLE_PAGE_LIMIT - 1) / ROLE_PAGE_LIMIT
+	lastPage := (total + PAGE_LIMIT - 1) / PAGE_LIMIT
 	if lastPage == 0 {
 		lastPage = 1
 	}

@@ -136,6 +136,16 @@ func (r *ClientRepository) GetClientRoles(abbr string) ([]string, error) {
     return roles, err
 }
 
+func (r *ClientRepository) ListClientBaseURLS() ([]string, error) {
+	var baseURLS []string
+	query := `SELECT base_url FROM clients WHERE deleted_at IS NULL`
+	err := r.db.Select(baseURLS, query)
+	if err != nil {
+		return nil, err
+	}
+	return baseURLS, nil
+}
+
 func NewClientRepository(db *sqlx.DB) *ClientRepository {
 	return &ClientRepository{db: db}
 }
