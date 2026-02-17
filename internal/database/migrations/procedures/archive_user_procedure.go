@@ -44,7 +44,11 @@ var ArchiveUserProcedure = migrations.MigrationPart{
 				VALUES (
 					userId, 
 					'archive_user', 
-					CONCAT('User ', HEX(userId), ' was successfully archived.')
+					CONCAT(
+						'User ', 
+						BIN_TO_UUID(user_id), 
+						' was successfully archived.'
+					)
 				);
 			ELSE
 				-- Optional: Throw an error if user doesn't exist

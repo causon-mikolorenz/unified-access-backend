@@ -47,9 +47,11 @@ var UpdateUserPasswordProcedure = migrations.MigrationPart{
             VALUES (
                 p_userId, 
                 'password_change', 
-                CONCAT('Password updated and all sessions revoked for user ', BINARY_TO_UUID(p_userId))
+                CONCAT(
+                    'Password updated and all sessions revoked for user ', 
+                    BIN_TO_UUID(p_userId)
+                )
             );
-
             COMMIT;
         END;
     `,
