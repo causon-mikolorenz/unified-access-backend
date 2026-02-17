@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/causon-mikolorenz/unified-access-backend/models"
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -58,7 +57,6 @@ func (r *ClientRepository) ListClients(limit, offset int) ([]models.Client, erro
 func (r *ClientRepository) CreateClient(
 	client *models.Client,
 	grants []string,
-	roles []string,
 ) error {
 	tx, err := r.db.Beginx()
 	if err != nil {
@@ -81,15 +79,6 @@ func (r *ClientRepository) CreateClient(
 	q2 := `INSERT INTO client_grant_types (client_id, grant_type) VALUES (?, ?)`
 	for _, g := range grants {
 		if _, err = tx.Exec(q2, client.ID, g); err != nil {
-			return err
-		}
-	}
-
-	// 3. Map Roles with abbreviation:role format
-	q3 := `INSERT INTO roles (id, role_name) VALUES (?, ?)`
-	for _, role := range roles {
-		formatted := fmt.Sprintf("%s:%s", client.Abbreviation, role)
-		if _, err = tx.Exec(q3, uuid.New(), formatted); err != nil {
 			return err
 		}
 	}
@@ -122,18 +111,18 @@ func (r *ClientRepository) SoftDelete(id []byte) error {
 }
 
 func (r *ClientRepository) GetGrantTypes(clientID []byte) ([]string, error) {
-    var grants []string
-    query := `SELECT grant_type FROM client_grant_types WHERE client_id = ?`
-    err := r.db.Select(&grants, query, clientID)
-    return grants, err
+	var grants []string
+	query := `SELECT grant_type FROM client_grant_types WHERE client_id = ?`
+	err := r.db.Select(&grants, query, clientID)
+	return grants, err
 }
 
 func (r *ClientRepository) GetClientRoles(abbr string) ([]string, error) {
-    var roles []string
-    // Using LIKE to find all roles prefixed with the abbreviation
-    query := `SELECT role_name FROM roles WHERE role_name LIKE ?`
-    err := r.db.Select(&roles, query, abbr+":%")
-    return roles, err
+	var roles []string
+	// Using LIKE to find all roles prefixed with the abbreviation
+	query := `SELECT role_name FROM roles WHERE role_name LIKE ?`
+	err := r.db.Select(&roles, query, abbr+":%")
+	return roles, err
 }
 
 func (r *ClientRepository) ListClientBaseURLS() ([]string, error) {
