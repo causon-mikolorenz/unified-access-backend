@@ -19,7 +19,7 @@ type ClientHandler struct {
 	PrivateKey *rsa.PrivateKey
 }
 
-// Create handles POST /v1/admin/clients
+// PostClient handles POST /v1/admin/clients
 // @Summary Register a new Service Provider with Icon
 // @Description Creates client, saves icon, hashes secret, and maps roles
 // @Tags ServiceProviders
@@ -36,15 +36,13 @@ type ClientHandler struct {
 // @Param image formData file true "Client Icon"
 // @Success 201 {object} map[string]string
 // @Router /v1/admin/clients [post]
-func (h *ClientHandler) Create(c *gin.Context) {
-	// 1. Handle File Upload First
+func (h *ClientHandler) PostClient(c *gin.Context) {
 	file, err := c.FormFile("image")
 	var imagePath string
 	if err == nil {
-		// Open file to sniff content
 		f, _ := file.Open()
 		defer f.Close()
-		
+
 		header := make([]byte, 512)
 		f.Read(header)
 
@@ -55,26 +53,22 @@ func (h *ClientHandler) Create(c *gin.Context) {
 
 		abbr := c.PostForm("abbreviation")
 		imagePath = "public/icons/" + abbr + "-" + file.Filename
-		
+
 		if err := c.SaveUploadedFile(file, imagePath); err != nil {
-			log.Printf("[ClientHandler] Image Save Error: %v", err)
-			c.JSON(http.StatusInternalServerError, 
-				gin.H{"error": "failed to save image"},
-			)
+			log.Printf("[PostClient] What failed: image save %v", err)
+			c.JSON(http.StatusInternalServerError,
+				gin.H{"error": "failed to save image"})
 			return
 		}
 	} else {
-        // As an Auditor, you might want to require an icon for the App Tray
-        c.JSON(http.StatusBadRequest, gin.H{"error": "client icon is required"})
-        return
-    }
+		c.JSON(http.StatusBadRequest, gin.H{"error": "client icon required"})
+		return
+	}
 
-	// 2. Extract Form Values (Since we can't use JSON binding)
 	clientID := uuid.New()
 	rawSecret, _ := auth.GenerateRandomString(32)
 	hashedSecret, _ := auth.HashSecret(rawSecret)
 
-	// Note: PostFormArray is used for slices like Grants and Roles
 	clientModel := &models.Client{
 		ID:            clientID[:],
 		ClientName:    c.PostForm("name"),
@@ -88,12 +82,9 @@ func (h *ClientHandler) Create(c *gin.Context) {
 	}
 
 	grants := c.PostFormArray("grants")
-
-	// 3. Database Transaction
-	err = h.Repo.CreateClient(clientModel, grants)
-	if err != nil {
-		log.Printf("[ClientHandler] Create Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+	if err = h.Repo.CreateClient(clientModel, grants); err != nil {
+		log.Printf("[PostClient] What failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
 		return
 	}
 
@@ -105,7 +96,7 @@ func (h *ClientHandler) Create(c *gin.Context) {
 	})
 }
 
-// List handles GET /v1/admin/clients
+// GetClientList handles GET /v1/admin/clients
 // @Summary List Service Providers
 // @Description Fetch active clients with pagination
 // @Tags ServiceProviders
@@ -113,13 +104,14 @@ func (h *ClientHandler) Create(c *gin.Context) {
 // @Param offset query int false "Pagination Offset" default(0)
 // @Success 200 {array} dto.ClientResponse
 // @Router /v1/admin/clients [get]
-func (h *ClientHandler) List(c *gin.Context) {
+func (h *ClientHandler) GetClientList(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
 	clients, err := h.Repo.ListClients(limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "fetch failed"})
+		log.Printf("[GetClientList] What failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "fetch error"})
 		return
 	}
 
@@ -137,23 +129,25 @@ func (h *ClientHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// GetByID handles GET /v1/admin/clients/:id
+// GetClient handles GET /v1/admin/clients/:id
 // @Summary Get Client Details
-// @Description Fetch full details of a specific client including grants and roles
+// @Description Fetch full details including grants and roles
 // @Tags ServiceProviders
 // @Param id path string true "Client UUID"
 // @Success 200 {object} dto.ClientResponse
 // @Router /v1/admin/clients/{id} [get]
-func (h *ClientHandler) GetByID(c *gin.Context) {
+func (h *ClientHandler) GetClient(c *gin.Context) {
 	idParam := c.Param("id")
 	clientUUID, err := uuid.Parse(idParam)
 	if err != nil {
+		log.Printf("[GetClient] What failed: invalid uuid %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid format"})
 		return
 	}
 
 	cl, err := h.Repo.GetByID(clientUUID[:])
 	if err != nil {
+		log.Printf("[GetClient] What failed: client not found %v", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "client not found"})
 		return
 	}
@@ -178,7 +172,7 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 	})
 }
 
-// Update handles PUT /v1/admin/clients/:id
+// PutClient handles PUT /v1/admin/clients/:id
 // @Summary Update Client Info
 // @Description Update safe fields (Name, Description, URLs, Image)
 // @Tags ServiceProviders
@@ -188,17 +182,17 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 // @Param body body dto.UpdateClientRequest true "Updated Client Data"
 // @Success 200 {object} map[string]string
 // @Router /v1/admin/clients/{id} [put]
-func (h *ClientHandler) Update(c *gin.Context) {
+func (h *ClientHandler) PutClient(c *gin.Context) {
 	idParam := c.Param("id")
 	clientUUID, _ := uuid.Parse(idParam)
 
 	var req dto.UpdateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[PutClient] What failed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
-	// Map DTO to Model - Note we do NOT map Abbreviation or Secret here
 	client := &models.Client{
 		ID:            clientUUID[:],
 		ClientName:    req.Name,
@@ -210,27 +204,30 @@ func (h *ClientHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.Repo.UpdateClient(client); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed"})
+		log.Printf("[PutClient] What failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update fail"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "client updated"})
 }
 
-// Delete handles DELETE /v1/admin/clients/:id
+// DeleteClient handles DELETE /v1/admin/clients/:id
 // @Summary Soft Delete Client
 // @Tags ServiceProviders
 // @Param id path string true "Client UUID"
 // @Router /v1/admin/clients/{id} [delete]
-func (h *ClientHandler) Delete(c *gin.Context) {
+func (h *ClientHandler) DeleteClient(c *gin.Context) {
 	idParam := c.Param("id")
 	clientUUID, err := uuid.Parse(idParam)
 	if err != nil {
+		log.Printf("[DeleteClient] What failed: invalid uuid %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
 		return
 	}
 
 	if err := h.Repo.SoftDelete(clientUUID[:]); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "delete failed"})
+		log.Printf("[DeleteClient] What failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "delete fail"})
 		return
 	}
 
