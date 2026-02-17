@@ -88,10 +88,9 @@ func (h *ClientHandler) Create(c *gin.Context) {
 	}
 
 	grants := c.PostFormArray("grants")
-	roles := c.PostFormArray("roles")
 
 	// 3. Database Transaction
-	err = h.Repo.CreateClient(clientModel, grants, roles)
+	err = h.Repo.CreateClient(clientModel, grants)
 	if err != nil {
 		log.Printf("[ClientHandler] Create Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
