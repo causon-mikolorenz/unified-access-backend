@@ -24,8 +24,8 @@ type Client struct {
 	Abbreviation  string    `db:"abbreviation"`
 	ClientSecret  string    `db:"client_secret"`
 	BaseUrl       string    `db:"base_url"`
-	RedirectUri   string    `db:"redirect_url"`
-	LogoutUri     string    `db:"logout_url"`
+	RedirectUri   string    `db:"redirect_uri"`
+	LogoutUri     string    `db:"logout_uri"`
 	Description   string    `db:"description"`
 	ImageLocation string    `db:"image_location"`
 	UpdatedAt     time.Time `db:"updated_at"`
