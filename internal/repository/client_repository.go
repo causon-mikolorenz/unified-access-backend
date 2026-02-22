@@ -22,7 +22,7 @@ func (r *ClientRepository) GetByID(id []byte) (*models.Client, error) {
 	var client models.Client
 	query := `
         SELECT id, client_name, abbreviation, description, 
-               image_location, base_url, redirect_url, logout_url, updated_at
+               image_location, base_url, redirect_uri, logout_uri, updated_at
         FROM clients 
         WHERE id = ? AND deleted_at IS NULL`
 
@@ -66,7 +66,7 @@ func (r *ClientRepository) CreateClient(
 
 	// 1. Insert Client
 	q1 := `INSERT INTO clients (id, client_name, abbreviation, client_secret, 
-               base_url, redirect_url, logout_url, description, image_location) 
+               base_url, redirect_uri, logout_uri, description, image_location) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err = tx.Exec(q1, client.ID, client.ClientName, client.Abbreviation,
 		client.ClientSecret, client.BaseUrl, client.RedirectUri,
@@ -93,7 +93,7 @@ func (r *ClientRepository) UpdateClient(c *models.Client) error {
 	query := `
         UPDATE clients 
         SET client_name = ?, description = ?, image_location = ?, 
-            base_url = ?, redirect_url = ?, logout_url = ?
+            base_url = ?, redirect_uri = ?, logout_uri = ?
         WHERE id = ? AND deleted_at IS NULL`
 
 	_, err := r.db.Exec(query, c.ClientName, c.Description, c.ImageLocation,
@@ -128,7 +128,7 @@ func (r *ClientRepository) GetClientRoles(abbr string) ([]string, error) {
 func (r *ClientRepository) ListClientBaseURLS() ([]string, error) {
 	var baseURLS []string
 	query := `SELECT base_url FROM clients WHERE deleted_at IS NULL`
-	err := r.db.Select(baseURLS, query)
+	err := r.db.Select(&baseURLS, query)
 	if err != nil {
 		return nil, err
 	}

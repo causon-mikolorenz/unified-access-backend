@@ -28,7 +28,7 @@ var RegisterClientProcedure = migrations.MigrationPart{
             VALUES (p_clientId, p_clientName, p_clientSecretHash);
 
             -- 2. Map & Bulk Insert Redirect URIs
-            INSERT INTO client_urls (client_id, redirect_url)
+            INSERT INTO client_urls (client_id, redirect_uri)
             SELECT p_clientId, jt.url
             FROM JSON_TABLE(
                 p_redirectUrisJson, 
