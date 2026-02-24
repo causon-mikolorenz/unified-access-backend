@@ -87,10 +87,10 @@ func (r *UserRepository) CreateUser(u *models.User) error {
 }
 
 // UpdateStatus changes the user's active/inactive state.
-func (r *UserRepository) UpdateStatus(id []byte, status string) error {
+func (r *UserRepository) UpdateStatus(user *models.User) error {
 	query := `UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?`
 
-	_, err := r.db.Exec(query, status, id)
+	_, err := r.db.Exec(query, string(user.Status), user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update user status: %w", err)
 	}
