@@ -14,16 +14,16 @@ type UserRequest struct {
 
 // UserResponse provides a safe view of user data, hiding the password hash.
 type UserResponse struct {
-	ID         string   `json:"id"`
-	Username   string   `json:"user_name"`
-	FirstName  string   `json:"first_name"`
-	MiddleName string   `json:"middle_name"`
-	LastName   string   `json:"last_name"`
-	Email      string   `json:"email"`
-	Status     string   `json:"status"`
-	CreatedAt  string   `json:"created_at"`
-	UpdatedAt  string   `json:"updated_at"`
-	Roles      []string `json:"roles"`
+	ID         string             `json:"id"`
+	Username   string             `json:"user_name"`
+	FirstName  string             `json:"first_name"`
+	MiddleName string             `json:"middle_name"`
+	LastName   string             `json:"last_name"`
+	Email      string             `json:"email"`
+	Status     string             `json:"status"`
+	CreatedAt  string             `json:"created_at"`
+	UpdatedAt  string             `json:"updated_at"`
+	Roles      []UserRoleRepsonse `json:"roles"`
 }
 
 // UserResponseList follows the same pagination pattern as Roles and Clients.
