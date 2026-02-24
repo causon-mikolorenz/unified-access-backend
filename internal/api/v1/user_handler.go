@@ -49,7 +49,7 @@ func (h *UserHandler) PostUser(c *gin.Context) {
 		Email:        req.Email,
 		PasswordHash: passwordHash,
 		Status:       models.StatusActive,
-		Roles:        req.Roles,
+		RoleString:   req.Roles,
 	}
 
 	err := h.Repo.CreateUser(&user)
