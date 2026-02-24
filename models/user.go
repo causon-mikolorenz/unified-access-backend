@@ -26,7 +26,8 @@ func (s UserStatus) IsRestricted() bool {
 	return s == StatusSuspended || s == StatusDeleted
 }
 
-func (s UserStatus) MapStatus(status string) (UserStatus, error) {
+func MapStatus(status string) (UserStatus, error) {
+	var s UserStatus
 	switch status {
 	case string(StatusActive):
 		s = StatusActive
