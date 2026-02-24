@@ -42,7 +42,7 @@ func MigrateAndSeed() {
 		Username:     adminUser,
 		Email:        adminEmail,
 		PasswordHash: hashedPassword,
-		Roles:        []string{"idp:admin"},
+		RoleString:   []string{"idp:admin"},
 	}
 
 	if err := userRepo.CreateUser(user); err != nil {
