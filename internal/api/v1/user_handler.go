@@ -161,6 +161,38 @@ func (h *UserHandler) GetUserList(c *gin.Context) {
 	})
 }
 
+func (h *UserHandler) PatchUserPassword(c *gin.Context) {
+	var req dto.UpdatePasswordRequest
+	userId, err := uuid.Parse(req.ID)
+	if err != nil {
+		log.Printf("[PatchUserPassword] UUID Parse Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID Format"})
+		return
+	}
+
+	passwordHash, err := auth.HashSecret(req.NewPassword)
+	if err != nil {
+		log.Printf("[PatchUpdatePassword] Hashing failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Hashing failed"})
+		return
+	}
+
+	user := models.User{
+		ID: userId[:],
+		PasswordHash: passwordHash,
+	}
+
+	err = h.Repo.UpdateUserPassword(&user)
+	if err != nil {
+		log.Printf("[PatchUpdatePassword] Update failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password Updated Successfuly!"})
+
+}
+
 // DeleteUser performs a soft delete on a user record
 // @Summary Delete User
 // @Description Mark a user as deleted by ID
