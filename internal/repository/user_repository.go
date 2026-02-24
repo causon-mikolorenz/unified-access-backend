@@ -63,7 +63,7 @@ func (r *UserRepository) GetUserById(id []byte) (*models.User, error) {
 
 // CreateUser executes a stored procedure to handle User and Roles atomically.
 func (r *UserRepository) CreateUser(u *models.User) error {
-	rolesJSON, err := json.Marshal(u.Roles)
+	rolesJSON, err := json.Marshal(u.RoleString)
 	if err != nil {
 		return fmt.Errorf("failed to marshal user roles: %w", err)
 	}
