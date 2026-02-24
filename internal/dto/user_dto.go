@@ -17,6 +17,11 @@ type UpdatePasswordRequest struct {
 	NewPassword string `json:"new_password" binding:"required"`
 }
 
+//UpdateStatusRequest handles patch data for updating user status
+type UpdateStatusRequest struct {
+	NewStatus string `json:"new_status" binding:"required"`
+}
+
 // UserResponse provides a safe view of user data, hiding the password hash.
 type UserResponse struct {
 	ID         string             `json:"id"`
