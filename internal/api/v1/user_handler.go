@@ -191,7 +191,7 @@ func (h *UserHandler) PatchUserPassword(c *gin.Context) {
 	}
 
 	user := models.User{
-		ID: userId[:],
+		ID:           userId[:],
 		PasswordHash: passwordHash,
 	}
 
@@ -203,6 +203,50 @@ func (h *UserHandler) PatchUserPassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password Updated Successfuly!"})
+}
+
+// PatchUserStatus updates the operational status of a user.
+// @Summary Update user status
+// @Description Modifies the status (e.g., active, disabled) of a user by ID.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body dto.UpdateUserRequest true "Status Update Data"
+// @Success 200 {object} map[string]interface{} "OK"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 501 {object} map[string]interface{} "Internal Server Error"
+// @Router /api/v1/users/{id}/status [patch]
+func (h *UserHandler) PatchUserStatus(c *gin.Context) {
+	id := c.Param("id")
+	var req dto.UpdateStatusRequest
+	userId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("[PatchUserStatus] UUID Parse Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID Format"})
+		return
+	}
+
+	status, err := models.MapStatus(req.NewStatus)
+	if err != nil {
+		log.Printf("[PatchUserStatus] Invalid status: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid status request"})
+		return
+	}
+
+	user := models.User{
+		ID:     userId[:],
+		Status: status,
+	}
+
+	err = h.Repo.UpdateStatus(&user)
+	if err != nil {
+		log.Printf("[PatchUserStatus] Update failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Status Updated Successfuly!"})
 }
 
 // DeleteUser performs a soft delete on a user record
