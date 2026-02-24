@@ -97,6 +97,17 @@ func (r *UserRepository) UpdateStatus(id []byte, status string) error {
 	return nil
 }
 
+// UpdateUserPassword calls the procedure for updating user's password.
+func (r *UserRepository) UpdateUserPassword(user *models.User) error {
+	query := `CALL UpdateUserPassword(?, ?)`
+
+	_, err := r.db.Exec(query, user.ID, user.PasswordHash)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
+}
+
 // GetRoles fetches the roles assigned to a user via the junction table.
 func (r *UserRepository) GetRoles(userID []byte) ([]models.Role, error) {
 	var roles []models.Role
