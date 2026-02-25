@@ -38,6 +38,22 @@ func (r *RoleRepository) GetByID(id int) (*models.Role, error) {
     return &role, err
 }
 
+// SearchRoles retrieves a list of roles from a keyword.
+// @Summary Get Roles by keyword
+// @ID search-role-by-name
+func (r *RoleRepository) SearchRoles(keyword string) ([]models.Role, error) {
+    var roles []models.Role
+    pattern := "%" + keyword + "%"
+    query := `
+        SELECT (id, role_name, description, created_at, updated_at) 
+        FROM roles WHERE deleted_at IS NULL AND role_name LIKE ?
+        LIMIT 10
+    `
+
+    err := r.db.Select(&roles, query, pattern)
+    return roles, err
+}
+
 // ListRoles returns a paginated list of active roles.
 // @Summary List Roles
 // @ID list-roles
