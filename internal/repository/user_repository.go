@@ -63,7 +63,7 @@ func (r *UserRepository) GetUserById(id []byte) (*models.User, error) {
 
 // CreateUser executes a stored procedure to handle User and Roles atomically.
 func (r *UserRepository) CreateUser(u *models.User) error {
-	rolesJSON, err := json.Marshal(u.Roles)
+	rolesJSON, err := json.Marshal(u.RoleString)
 	if err != nil {
 		return fmt.Errorf("failed to marshal user roles: %w", err)
 	}
@@ -87,14 +87,65 @@ func (r *UserRepository) CreateUser(u *models.User) error {
 }
 
 // UpdateStatus changes the user's active/inactive state.
-func (r *UserRepository) UpdateStatus(id []byte, status string) error {
+func (r *UserRepository) UpdateStatus(user *models.User) error {
 	query := `UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?`
 
-	_, err := r.db.Exec(query, status, id)
+	_, err := r.db.Exec(query, string(user.Status), user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update user status: %w", err)
 	}
 	return nil
+}
+
+// UpdateUserPassword calls the procedure for updating user's password.
+func (r *UserRepository) UpdateUserPassword(user *models.User) error {
+	query := `CALL UpdateUserPassword(?, ?)`
+
+	_, err := r.db.Exec(query, user.ID, user.PasswordHash)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
+}
+
+// UpdateUserRoles updates the roles of a specific user based on the role IDs
+func (r *UserRepository) UpdateUserRoles(userID []byte, roleIDs []int) error {
+	tx, err := r.db.Beginx()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// if some roles are deleted but not all
+	if len(roleIDs) > 0 {
+		deleteQuery, args, _ := sqlx.In(
+			`DELETE FROM user_roles WHERE user_id = ? AND role_id NOT IN (?)`, 
+			userID, 
+			roleIDs,
+		)
+		if _, err := tx.Exec(tx.Rebind(deleteQuery), args...); err != nil {
+            return fmt.Errorf("failed to delete user roles: %w", err)
+        }
+    } else {
+        // If roleIDs is empty, remove all roles for the user
+        deleteAll := "DELETE FROM user_roles WHERE user_id = ?"
+        if _, err := tx.Exec(deleteAll, userID); err != nil {
+            return fmt.Errorf("failed to delete all roles from user: %w", err)
+        }
+    }
+
+	insertQuery := `
+        INSERT INTO user_roles (user_id, role_id) 
+        VALUES (?, ?) 
+        ON DUPLICATE KEY UPDATE role_id = role_id`
+
+    for _, rid := range roleIDs {
+        if _, err := tx.Exec(insertQuery, userID, rid); err != nil {
+            return fmt.Errorf("upsert error: %w", err)
+        }
+    }
+	
+	return tx.Commit()
 }
 
 // GetRoles fetches the roles assigned to a user via the junction table.

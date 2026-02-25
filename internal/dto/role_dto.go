@@ -13,6 +13,12 @@ type RoleResponse struct {
 	UpdatedAt   string `json:"updated_at"`
 }
 
+type UserRoleRepsonse struct {
+	ID          int    `json:"id"`
+	RoleName    string `json:"role_name"`
+	Description string `json:"description"`
+}
+
 type RoleListRequest struct {
 	Roles       []RoleResponse `json:"roles"`
 	TotalCount  int            `json:"total_count"`

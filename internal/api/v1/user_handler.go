@@ -49,7 +49,7 @@ func (h *UserHandler) PostUser(c *gin.Context) {
 		Email:        req.Email,
 		PasswordHash: passwordHash,
 		Status:       models.StatusActive,
-		Roles:        req.Roles,
+		RoleString:   req.Roles,
 	}
 
 	err := h.Repo.CreateUser(&user)
@@ -159,6 +159,120 @@ func (h *UserHandler) GetUserList(c *gin.Context) {
 		CurrentPage: page,
 		LastPage:    lastPage,
 	})
+}
+
+// PatchUserPassword updates a user's password.
+// @Summary Update user password
+// @Description Updates the password for a specific user identified by ID.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body dto.UpdateUserRequest true "Password Update Data"
+// @Success 200 {object} map[string]string "OK"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 501 {object} map[string]string "Internal Server Error"
+// @Router /api/v1/users/{id}/password [patch]
+func (h *UserHandler) PatchUserPassword(c *gin.Context) {
+	id := c.Param("id")
+	var req dto.UpdatePasswordRequest
+	userId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("[PatchUserPassword] UUID Parse Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID Format"})
+		return
+	}
+
+	passwordHash, err := auth.HashSecret(req.NewPassword)
+	if err != nil {
+		log.Printf("[PatchUpdatePassword] Hashing failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Hashing failed"})
+		return
+	}
+
+	user := models.User{
+		ID:           userId[:],
+		PasswordHash: passwordHash,
+	}
+
+	err = h.Repo.UpdateUserPassword(&user)
+	if err != nil {
+		log.Printf("[PatchUpdatePassword] Update failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password Updated Successfuly!"})
+}
+
+// PatchUserStatus updates the operational status of a user.
+// @Summary Update user status
+// @Description Modifies the status (e.g., active, disabled) of a user by ID.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body dto.UpdateUserRequest true "Status Update Data"
+// @Success 200 {object} map[string]interface{} "OK"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 501 {object} map[string]interface{} "Internal Server Error"
+// @Router /api/v1/users/{id}/status [patch]
+func (h *UserHandler) PatchUserStatus(c *gin.Context) {
+	id := c.Param("id")
+	var req dto.UpdateStatusRequest
+	userId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("[PatchUserStatus] UUID Parse Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID Format"})
+		return
+	}
+
+	status, err := models.MapStatus(req.NewStatus)
+	if err != nil {
+		log.Printf("[PatchUserStatus] Invalid status: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid status request"})
+		return
+	}
+
+	user := models.User{
+		ID:     userId[:],
+		Status: status,
+	}
+
+	err = h.Repo.UpdateStatus(&user)
+	if err != nil {
+		log.Printf("[PatchUserStatus] Update failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Status Updated Successfuly!"})
+}
+
+func (h *UserHandler) PatchUserRoles(c *gin.Context) {
+	id := c.Param("id")
+	var req dto.UpdateUserRoleRequest
+	userId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("[PatchUserRoles] UUID Parse Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID Format"})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[PatchUserRoles] Bind JSON Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalaid input"})
+		return
+	}
+
+	err = h.Repo.UpdateUserRoles(userId[:], req.RoleIDs)
+	if err != nil {
+		log.Printf("[PatchUserRoles] Update failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "roles updated successfully!"})
 }
 
 // DeleteUser performs a soft delete on a user record

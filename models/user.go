@@ -26,7 +26,8 @@ func (s UserStatus) IsRestricted() bool {
 	return s == StatusSuspended || s == StatusDeleted
 }
 
-func (s UserStatus) MapStatus(status string) (UserStatus, error) {
+func MapStatus(status string) (UserStatus, error) {
+	var s UserStatus
 	switch status {
 	case string(StatusActive):
 		s = StatusActive
@@ -55,7 +56,8 @@ type User struct {
 	CreatedAt    time.Time  `db:"created_at"`
 	UpdatedAt    time.Time  `db:"updated_at"`
 
-	Roles []string `db:"-"`
+	RoleString []string `db:"-"`
+	Roles	[]Role `db:"-"`
 }
 
 type Role struct {
