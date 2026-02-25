@@ -249,6 +249,32 @@ func (h *UserHandler) PatchUserStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Status Updated Successfuly!"})
 }
 
+func (h *UserHandler) PatchUserRoles(c *gin.Context) {
+	id := c.Param("id")
+	var req dto.UpdateUserRoleRequest
+	userId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("[PatchUserRoles] UUID Parse Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID Format"})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[PatchUserRoles] Bind JSON Error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalaid input"})
+		return
+	}
+
+	err = h.Repo.UpdateUserRoles(userId[:], req.RoleIDs)
+	if err != nil {
+		log.Printf("[PatchUserRoles] Update failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "roles updated successfully!"})
+}
+
 // DeleteUser performs a soft delete on a user record
 // @Summary Delete User
 // @Description Mark a user as deleted by ID
