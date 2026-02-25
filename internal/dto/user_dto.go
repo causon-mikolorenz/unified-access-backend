@@ -22,6 +22,11 @@ type UpdateStatusRequest struct {
 	NewStatus string `json:"new_status" binding:"required"`
 }
 
+//UpdateUserRoleRequest handles patch data for updating user roles
+type UpdateUserRoleRequest struct {
+	RoleIDs []int `json:"role_ids" binding:"required" validate:"required"`
+}
+
 // UserResponse provides a safe view of user data, hiding the password hash.
 type UserResponse struct {
 	ID         string             `json:"id"`
