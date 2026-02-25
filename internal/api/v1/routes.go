@@ -61,6 +61,9 @@ func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
 			users.POST("", h.UserHandler.PostUser)
 			users.GET("", h.UserHandler.GetUserList)
 			users.GET("/:id", h.UserHandler.GetUser)
+			users.PATCH("/:id/status", h.UserHandler.PatchUserStatus)
+			users.PATCH("/:id/password", h.UserHandler.PatchUserPassword)
+			users.PATCH("/:id/roles", h.UserHandler.PatchUserRoles)
 			users.DELETE("/:id", h.UserHandler.DeleteUser)
 		}
 	}
