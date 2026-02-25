@@ -90,7 +90,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.UserResponse{
-		ID:         string(user.ID),
+		ID:         id,
 		Username:   user.Username,
 		FirstName:  user.FirstName,
 		MiddleName: user.MiddleName,
@@ -139,19 +139,24 @@ func (h *UserHandler) GetUserList(c *gin.Context) {
 	}
 
 	var userResponses []dto.UserResponse
-	for _, user := range users {
-		userResponses = append(userResponses, dto.UserResponse{
-			ID:         string(user.ID),
-			Username:   user.Username,
-			FirstName:  user.FirstName,
-			MiddleName: user.MiddleName,
-			LastName:   user.LastName,
-			Email:      user.Email,
-			Status:     string(user.Status),
-			CreatedAt:  user.CreatedAt.Format(TIME_LAYOUT),
-			UpdatedAt:  user.UpdatedAt.Format(TIME_LAYOUT),
-		})
-	}
+    for _, user := range users {
+        userId, err := uuid.FromBytes(user.ID[:])
+        if err != nil {
+            log.Printf("[GetUserLIst] Parsing failed: %v", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "parse fail"})
+        }
+        userResponses = append(userResponses, dto.UserResponse{
+            ID:         userId.String(),
+            Username:   user.Username,
+            FirstName:  user.FirstName,
+            MiddleName: user.MiddleName,
+            LastName:   user.LastName,
+            Email:      user.Email,
+            Status:     string(user.Status),
+            CreatedAt:  user.CreatedAt.Format(TIME_LAYOUT),
+            UpdatedAt:  user.UpdatedAt.Format(TIME_LAYOUT),
+        })
+    }
 
 	c.JSON(http.StatusOK, dto.UserResponseList{
 		Users:       userResponses,
