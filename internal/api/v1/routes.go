@@ -49,7 +49,13 @@ func MapRoutes(v1Group *gin.RouterGroup, h Handlers) {
 		roles := admin.Group("/roles")
 		{
 			roles.POST("", h.RoleHandler.PostRole)
-			roles.GET("", h.RoleHandler.GetRoleList)
+			roles.GET("", func(c *gin.Context) {
+				if c.Query("keyword") != "" {
+					h.RoleHandler.GetRolesBySearch(c)
+				} else {
+					h.RoleHandler.GetRoleList(c)
+				}
+			})
 			roles.GET("/:id", h.RoleHandler.GetRole)
 			roles.PUT("/:id", h.RoleHandler.PutRole)
 			roles.DELETE("/:id", h.RoleHandler.DeleteRole)
