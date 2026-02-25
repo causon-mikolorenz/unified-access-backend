@@ -97,10 +97,11 @@ func (h *RoleHandler) GetRoleList(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, dto.RoleListRequest{
+	c.JSON(http.StatusOK, dto.RoleListResponse{
 		Roles:       roleResponses,
 		CurrentPage: page,
 		LastPage:    lastPage,
+		TotalCount:  total,
 	})
 }
 
@@ -134,6 +135,59 @@ func (h *RoleHandler) GetRole(c *gin.Context) {
 		Description: role.Description,
 		CreatedAt:   role.CreatedAt.Format(TIME_LAYOUT),
 		UpdatedAt:   role.UpdatedAt.Format(TIME_LAYOUT),
+	})
+}
+
+// GetRolesBySearch retrieves a filtered list of roles by keyword.
+// @Summary Search roles by keyword
+// @Description Searches for roles matching the provided query parameter.
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Param keyword query string true "Search term for role names"
+// @Success 200 {object} dto.RoleListResponse "Success"
+// @Failure 404 {object} map[string]interface{} "Not Found"
+// @Failure 501 {object} map[string]interface{} "Internal Server Error"
+// @Router /api/roles [get]
+func (h *RoleHandler) GetRolesBySearch(c *gin.Context) {
+	keyword := c.Query("keyword")
+	roles, err := h.Repo.SearchRoles(keyword)
+	if err != nil {
+		log.Printf("[GetRolesBySearch] Fetch failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "fetching error"})
+	}
+
+	if len(roles) == 0 {
+		log.Printf(
+			"[GetRolesBySearch] No role found with keyword %s: %v",
+			keyword,
+			err,
+		)
+		c.JSON(
+			http.StatusNotFound,
+			gin.H{"error": "role not found using keyword"},
+		)
+	}
+
+	var roleResponses []dto.RoleResponse
+	for _, r := range roles {
+		roleResponses = append(roleResponses, dto.RoleResponse{
+			ID:          r.ID,
+			RoleName:    r.RoleName,
+			Description: r.Description,
+			CreatedAt:   r.CreatedAt.Format(TIME_LAYOUT),
+			UpdatedAt:   r.UpdatedAt.Format(TIME_LAYOUT),
+		})
+	}
+
+	const currentPage = 1
+	const lastPage = 1
+	const total = 10
+	c.JSON(http.StatusOK, dto.RoleListResponse{
+		Roles:       roleResponses,
+		CurrentPage: currentPage,
+		LastPage:    lastPage,
+		TotalCount:  total,
 	})
 }
 
