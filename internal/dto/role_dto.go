@@ -19,7 +19,7 @@ type UserRoleRepsonse struct {
 	Description string `json:"description"`
 }
 
-type RoleListRequest struct {
+type RoleListResponse struct {
 	Roles       []RoleResponse `json:"roles"`
 	TotalCount  int            `json:"total_count"`
 	CurrentPage int            `json:"current_page"`

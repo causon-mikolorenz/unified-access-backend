@@ -31,9 +31,27 @@ func (r *RoleRepository) CreateRole(role models.Role) error {
 // @ID get-role-by-id
 func (r *RoleRepository) GetByID(id int) (*models.Role, error) {
     var role models.Role
-    query := `SELECT * FROM roles WHERE id = ? AND deleted_at IS NULL`
+    query := `
+        SELECT (id, role_name, description, created_at, updated_at) 
+        FROM roles WHERE id = ? AND deleted_at IS NULL`
     err := r.db.Get(&role, query, id)
     return &role, err
+}
+
+// SearchRoles retrieves a list of roles from a keyword.
+// @Summary Get Roles by keyword
+// @ID search-role-by-name
+func (r *RoleRepository) SearchRoles(keyword string) ([]models.Role, error) {
+    var roles []models.Role
+    pattern := "%" + keyword + "%"
+    query := `
+        SELECT (id, role_name, description, created_at, updated_at) 
+        FROM roles WHERE deleted_at IS NULL AND role_name LIKE ?
+        LIMIT 10
+    `
+
+    err := r.db.Select(&roles, query, pattern)
+    return roles, err
 }
 
 // ListRoles returns a paginated list of active roles.
@@ -42,7 +60,7 @@ func (r *RoleRepository) GetByID(id int) (*models.Role, error) {
 func (r *RoleRepository) ListRoles(limit, offset int) ([]models.Role, error) {
     var roles []models.Role
     query := `
-        SELECT * FROM roles 
+        SELECT (id, role_name, description, created_at, updated_at) FROM roles 
         WHERE deleted_at IS NULL 
         ORDER BY id DESC 
         LIMIT ? OFFSET ?`
